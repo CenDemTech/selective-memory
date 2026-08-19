@@ -1,0 +1,539 @@
+[
+  {
+    "title": "Weekend hiking plans",
+    "create_time": 1770838263.0,
+    "update_time": 1770838323.0,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": [
+          "sys"
+        ]
+      },
+      "sys": {
+        "id": "sys",
+        "message": {
+          "id": "sys",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": [
+          "u"
+        ]
+      },
+      "u": {
+        "id": "u",
+        "message": {
+          "id": "u",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838264.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Any tips for a first overnight backpacking trip?"
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "sys",
+        "children": [
+          "a0"
+        ]
+      },
+      "a0": {
+        "id": "a0",
+        "message": {
+          "id": "a0",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838265.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": [
+          "call"
+        ]
+      },
+      "call": {
+        "id": "call",
+        "message": {
+          "id": "call",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838266.0,
+          "content": {
+            "content_type": "code",
+            "text": "search(\"x\")"
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "a0",
+        "children": [
+          "answer"
+        ]
+      },
+      "answer": {
+        "id": "answer",
+        "message": {
+          "id": "answer",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838267.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Start with a well-marked trail under 10 miles, pack layers, and test your gear at home first. Water and a map matter most."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {
+            "real_author": "tool:web"
+          },
+          "recipient": "all"
+        },
+        "parent": "call",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "answer",
+    "conversation_id": "c-plans",
+    "is_archived": false,
+    "is_starred": null,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "c-plans"
+  },
+  {
+    "title": "Leaked AWS key in a repo",
+    "create_time": 1770838363.0,
+    "update_time": 1770838423.0,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": [
+          "sys"
+        ]
+      },
+      "sys": {
+        "id": "sys",
+        "message": {
+          "id": "sys",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": [
+          "u"
+        ]
+      },
+      "u": {
+        "id": "u",
+        "message": {
+          "id": "u",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838364.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "I accidentally committed AKIAIOSFODNN7EXAMPLE to a public repo. What now?"
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "sys",
+        "children": [
+          "a0"
+        ]
+      },
+      "a0": {
+        "id": "a0",
+        "message": {
+          "id": "a0",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838367.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Rotate that key immediately in the AWS console, then purge it from git history. Assume it's compromised."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a0",
+    "conversation_id": "c-key",
+    "is_archived": false,
+    "is_starred": null,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "c-key"
+  },
+  {
+    "title": "Dinner spots",
+    "create_time": 1770838463.0,
+    "update_time": 1770838523.0,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": [
+          "sys"
+        ]
+      },
+      "sys": {
+        "id": "sys",
+        "message": {
+          "id": "sys",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": [
+          "u"
+        ]
+      },
+      "u": {
+        "id": "u",
+        "message": {
+          "id": "u",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838464.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Find me a good sushi place near me for tonight."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "sys",
+        "children": [
+          "a0"
+        ]
+      },
+      "a0": {
+        "id": "a0",
+        "message": {
+          "id": "a0",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838467.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "I can't see your location, but searching 'sushi near me' in maps will rank the closest well-reviewed spots."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a0",
+    "conversation_id": "c-near",
+    "is_archived": false,
+    "is_starred": null,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "c-near"
+  },
+  {
+    "title": "Naming a startup",
+    "create_time": 1770838563.0,
+    "update_time": 1770838623.0,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": [
+          "u"
+        ]
+      },
+      "u": {
+        "id": "u",
+        "message": {
+          "id": "u",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838564.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Suggest a name for my analytics startup."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": [
+          "a_old",
+          "a_new"
+        ]
+      },
+      "a_old": {
+        "id": "a_old",
+        "message": {
+          "id": "a_old",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838565.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "How about DataPeak?"
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": []
+      },
+      "a_new": {
+        "id": "a_new",
+        "message": {
+          "id": "a_new",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838566.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Try Quantly, Metricly, or Insightful \u2014 short and brandable."
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a_new",
+    "conversation_id": "c-branch",
+    "is_archived": false,
+    "is_starred": null,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "c-branch"
+  },
+  {
+    "title": "",
+    "create_time": 1770838663.0,
+    "update_time": 1770838723.0,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": [
+          "sys"
+        ]
+      },
+      "sys": {
+        "id": "sys",
+        "message": {
+          "id": "sys",
+          "author": {
+            "role": "system",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": null,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              ""
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {
+            "is_visually_hidden_from_conversation": true
+          },
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": [
+          "u"
+        ]
+      },
+      "u": {
+        "id": "u",
+        "message": {
+          "id": "u",
+          "author": {
+            "role": "user",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838664.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "hi"
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "sys",
+        "children": [
+          "a0"
+        ]
+      },
+      "a0": {
+        "id": "a0",
+        "message": {
+          "id": "a0",
+          "author": {
+            "role": "assistant",
+            "name": null,
+            "metadata": {}
+          },
+          "create_time": 1770838667.0,
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "Hello!"
+            ]
+          },
+          "status": "finished_successfully",
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "u",
+        "children": []
+      }
+    },
+    "moderation_results": [],
+    "current_node": "a0",
+    "conversation_id": "c-untitled",
+    "is_archived": false,
+    "is_starred": null,
+    "safe_urls": [],
+    "default_model_slug": "gpt-4o",
+    "id": "c-untitled"
+  }
+]
