@@ -45,23 +45,22 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 
 ## The steps
 
-Four steps in the chip row — **Platform selection · Upload · Edit · Export** —
-but only three pages: uploading is a modal rather than a page of its own, so
-picking a platform and handing over a file read as one step, and the **Upload**
-chip is a marker rather than a screen. The chip row sits under each heading;
-completed steps keep a green tick, and the chip for the current page reads
-active.
+Four steps, four pages — **Platform selection · Upload · Edit · Export** — named
+in a chip row under each heading; completed steps keep a green tick, and the chip
+for the current page reads active. The page number is the chip number.
 
 1. **Platform selection** — pick which service the export came from: **Anthropic**
-   (Claude) or **Open AI** (ChatGPT). Choosing one opens the upload modal
-   (chip 2, **Upload**).
-2. **Edit** — a sortable, searchable table of every conversation with its name,
+   (Claude) or **Open AI** (ChatGPT). Choosing one advances to Upload.
+2. **Upload** — a card naming the platform it will be read as, then a large
+   dropzone: drop your `conversations.json` or **browse files**. **Back** returns
+   to the platform cards. On a successful parse it advances to Edit.
+3. **Edit** — a sortable, searchable table of every conversation with its name,
    start time, last update, message count, word count, duration, and a
    **Conversation sensitivity** tag (see below), filterable by tier. Each row has
    a **Review** button that opens the full transcript in a modal for redacting
    and deleting. Tick the rows you want to keep, then **Review .json file to be
-   exported**.
-3. **Export** — a read-only review titled **Review your conversations to
+   exported**. **Upload a different file** returns to the Upload page.
+4. **Export** — a read-only review titled **Review your conversations to
    export**: the ticked conversations with their final sensitivity labels plus
    two tally columns, **Redactions** and **Msgs deleted**, so the shape of each
    conversation is visible before committing. **Export (.json) conversation
@@ -69,19 +68,17 @@ active.
    **Download .json** button. **Back** returns to the table with the selection
    intact.
 
-### The upload modal
+### The upload page
 
 It restates the platform you picked above the dropzone, so a wrong choice is
-obvious before a file is committed to it. Two ways out besides dropping a file:
-**Choose a different platform** returns to page 1 — the only route back there, so
-page 1 can never become a dead end, since picking a platform reopens the modal —
-and dismissing it leaves you where you were. Reached from the Edit page's
-**Upload a different file**, it opens over the live table.
+obvious before a file is committed to it. Its **Back** button returns to the
+platform cards. The page is also reached from the Edit page's **Upload a
+different file**, to swap the file for a fresh one.
 
-Because it does open over a live table, a rejected file has to leave that table
-working: the previous session's token is held until the new file has parsed, and
-only then is the old working directory reset. The error renders inside the modal
-and the existing conversations stay editable.
+Swapping a file has to leave the current session working until the new one is
+good: the previous session's token is held until the new file has parsed, and
+only then is the old working directory reset. A rejected file renders its error
+on the page and the existing conversations stay editable.
 
 There is no separate export-vs-remove choice: ticking a row includes it. The
 backend still supports a `remove` build mode over `/api/build` — the UI just
@@ -107,16 +104,24 @@ all*. The guard is one-shot and expires on its own.
 ### Deleting conversations
 
 Each row carries a **trashcan**, and a **Delete** button above the table removes
-every selected conversation at once. Both hit `/api/delete_conversations`, which
-rewrites the working copy without them — this is the "or the whole conversation"
-half of the page's promise, not just a filter.
+every selected conversation at once. Both hit `/api/delete_conversations` — this
+is the "or the whole conversation" half of the page's promise, not just a filter.
 
-It is not undoable (the undo stack covers edits *within* a conversation), so both
-paths confirm first. Deleting renumbers everything after the gap — row indices
-are positions in the listed set — so the endpoint returns freshly built metadata
-and the client re-renders the table wholesale rather than patching rows, which
-would leave every index after the gap pointing at the wrong conversation. Any
-file built beforehand is discarded.
+It's a **soft delete**, and undoable. Rather than rewriting the file (which
+renumbered every following row and couldn't be reversed), the uuids are added to
+the session's `deleted` set: the conversation stays in the working file, so its
+row becomes a **greyed tombstone in place** — struck-through name, no checkbox, no
+actions, a *Deleted* tag — and it's simply left out of the export. Because indices
+never move, the client just flags the affected rows and repaints them rather than
+re-rendering the whole table.
+
+**Undo / redo, beside the Delete button.** A pair of hooked-arrow buttons (like
+the review modal's) undo and redo whole-conversation deletions:
+`/api/undo_delete` pulls the last delete action's uuids back out of the set (the
+tombstones turn back into live rows), `/api/redo_delete` re-applies it, and a
+fresh delete drops the redo stack. There's no confirm — the undo button is the
+safety net. The footer's count carries a `· N deleted` tail while any tombstones
+are present.
 
 The Edit page's lede names the uploaded file but deliberately carries no count:
 deleting would leave one stale, and the footer already reports the total.
@@ -164,13 +169,14 @@ backgrounded tab — and a find bar should land immediately anyway.
 
 ## Redacting flagged text
 
-Two buttons sit beside the dropdown. **Redact** (amber) redacts the run you're
-parked on. **Highlight & Redact** (blue) redacts *every* flagged run in the
-conversation at once — it re-scans and redacts the first remaining run until
-none are left, so it always operates on a still-flagged target. Either way the
-run turns into a **greyed-out box** in place — the text stays visible so you can
-see what you took out — the highlight list shrinks, and the conversation's row in
-the table picks up a blue tint, a left accent bar, and a count chip so modified
+In Edit mode, **Redact all highlighted** (amber, beside the highlight dropdown)
+redacts *every* detected highlight in the conversation at once. To redact just
+one, **click it** — selecting a sensitivity highlight (edit mode only) rings it
+and pops a floating **Delete** button above it; one click redacts that run.
+Clicking the selected highlight again unclicks it. Either way each run turns into
+a **greyed-out box** in place — the text stays visible so you can see what you
+took out — the highlight list shrinks, and the conversation's row in the table
+picks up a blue tint, a left accent bar, and a count chip so modified
 conversations are obvious at a glance. Redactions ride into the file you build
 afterwards, stripped out.
 
@@ -215,12 +221,45 @@ The row's other metadata is recomputed from the server's response, so the word
 count drops and the sensitivity tag can fall — redact every flagged run in a Red
 conversation and it turns Green.
 
+## Review vs. Edit
+
+The Review modal opens **read-only**: you see the transcript, the highlight
+finder, undo/redo, and the revision count — nothing that changes the
+conversation. An **Edit** button in the header (always present, on every
+conversation, green ones included) swaps itself out for the editing tools: the
+**Redact all highlighted** button, the **Highlight mode** toggle, the per-turn
+checkboxes and trash icons (per-message ones appear on hover), and the footer's
+**Delete Entire Conversation** / **Save Changes**. It's a single `editing` class
+on the modal; opening a conversation always starts in Review. The highlights
+themselves stay visible in Review — they show what's flagged — but nothing that
+would alter the text is shown until you ask for it.
+
+**Leaving edit mode.** While editing, the close **✕** is replaced by **✕ Exit
+Edit**, so you have to step out of editing before the conversation can be closed
+(Escape and a backdrop click exit edit mode too, rather than closing). Two ways
+out, both keeping the review window open:
+
+- **Save Changes** keeps this session's edits and drops back to Review.
+- **✕ Exit Edit** also drops back to Review, but if you made edits without
+  saving it first asks *"You made changes to the conversation without saving. Are
+  you sure you want to exit without saving?"* — and on confirm it **rolls those
+  edits back** to the state you entered edit mode on (undoing to the baseline),
+  since every edit is otherwise written straight to the working copy. Exiting
+  with nothing changed doesn't prompt.
+
+**Highlight mode** (a toggle, edit-only) lets you redact text the classifier
+didn't flag: with it on, drag-select any run inside a message — the selection
+turns **red** — and a floating **Delete** button appears just above it. One click
+redacts exactly that run (boxed like any redaction). With the toggle off,
+selecting text does nothing. This is separate from **Redact all highlighted**,
+which boxes the classifier's detected runs in one go.
+
 ## Deleting messages and turns
 
 The transcript is grouped into **turns** — a prompt and the reply (or replies)
-that follow it, under a "Turn N" divider. Deletion is always available: there's
-no mode to arm first. Every turn *and* every message carries a **checkbox** and a
-**trash icon**, sitting at the far end of the header row.
+that follow it, under a "Turn N" divider. In Edit mode every turn *and* every
+message carries a **checkbox** and a **trash icon**, sitting at the far end of the
+header row.
 
 There are three ways to remove content from a transcript:
 
@@ -232,20 +271,20 @@ There are three ways to remove content from a transcript:
 - **Select, then delete a batch.** Ticking message checkboxes builds a selection;
   a turn checkbox ticks all of that turn's live messages at once and reads
   checked only when they all are. The footer's destructive button does double
-  duty — **Delete Conversation** by default, switching to **Delete N messages**
-  while any are selected — so the two never compete for the same slot.
-- **Delete an arbitrary text selection.** Drag-select any run of text inside a
-  message and a floating **✕ Delete** button appears just above it. One click
-  removes exactly that text. When the selected string appears more than once in
-  the message, only the copy you highlighted goes: the client sends the
-  selection's *occurrence index* (an encoding-agnostic count of identical runs
-  before it) rather than a raw offset, sidestepping the UTF-16 vs code-point
-  mismatch, and the server removes that specific occurrence from both `text` and
-  the mirroring content blocks so nothing leaks into the export. This is tallied
-  as a redaction.
+  duty — **Delete Entire Conversation** by default, switching to **Delete N
+  messages** while any are selected — so the two never compete for the same slot.
+- **Redact any text.** To remove a run the classifier didn't flag, turn on
+  **Highlight mode** and drag-select it — the selection turns red, a floating
+  **Delete** button appears above it, and one click redacts exactly that run.
+  Under the hood this is `/api/delete_text`: when the selected string appears more
+  than once, the run is matched by *occurrence* (an encoding-agnostic count of
+  identical copies before it, sidestepping the UTF-16 vs code-point mismatch), and
+  the box is stripped from both `text` and the mirroring content blocks at export
+  so nothing leaks.
 
-The footer's **Delete Conversation** removes the whole open conversation (the
-same not-undoable path as the table's trashcan, so it confirms first) and closes
+The footer's **Delete Entire Conversation** removes the whole open conversation
+(the same not-undoable path as the table's trashcan, so it confirms first) and
+closes
 the modal.
 
 All of these share the redaction machinery — they rewrite the session's working
@@ -329,7 +368,7 @@ How the colours are used:
 | `--surface-2` | Elevated: sticky table header, your own message bubbles |
 | `--surface-3` | Highest: row actions, secondary buttons |
 | `--ink` | Headings and body text, at full / `.64` / `.40` alpha |
-| `--blue` | Primary CTAs (Review .json file to be exported, Export (.json) conversation file, Highlight & Redact, Save Changes, Download), the active step chip, and the edit-count badge |
+| `--blue` | Primary CTAs (Review .json file to be exported, Export (.json) conversation file, the Edit button, Save Changes, Download), the active step chip, and the edit-count badge |
 | `--blue-bright` | Links, inline `code`, the assistant's speaker label, the edited-row accent |
 | `--ok` | The green tick on completed step chips and on the privacy footnote |
 
@@ -355,13 +394,13 @@ search field's clear button — render dark to match.
 
 | File | What it does |
 | --- | --- |
-| `app.py` | Flask routes: upload, transcript, redact, delete_text, delete_messages, delete_conversations, undo, redo, build, download, reset |
+| `app.py` | Flask routes: upload, transcript, redact, delete_text, delete_messages, delete_conversations, undo_delete, redo_delete, undo, redo, build, download, reset |
 | `claude_parser.py` | Claude parsing (pandas) plus UI-shaping helpers |
 | `openai_parser.py` | ChatGPT parsing — mapping-graph traversal and edits |
 | `sensitivity.py` | Green/Yellow/Red rules, gates, and validators |
 | `redaction.py` | Redaction markers: wrap, strip for export, split into display segments |
-| `templates/index.html` | All three pages, plus the upload, review, and download modals |
-| `static/app.js` | Page transitions, upload modal, table, selection, transcript, build/download |
+| `templates/index.html` | All four pages, plus the review and download modals |
+| `static/app.js` | Page transitions, upload, table, selection, transcript, build/download |
 | `static/style.css` | Styling |
 | `sample_data/conversations.json` | Claude fixture covering the awkward cases |
 | `sample_data/openai_conversations.json` | ChatGPT fixture (graph, tool nodes, a branch) |

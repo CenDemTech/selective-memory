@@ -49,10 +49,50 @@
     </div>
   </section>
 
-  <!-- ── Step 2 · edit ────────────────────────────────────────────── -->
+  <!-- ── Step 2 · upload ──────────────────────────────────────────── -->
   <section class="page" id="page-2">
     <div class="page-inner">
-      <button class="back" id="back-to-upload">← Upload a different file</button>
+      <button class="back" data-goto="1">← Back</button>
+      <h1>Upload your conversation dataset</h1>
+      <p class="lede" id="upload-lede">Drop your <code>conversations.json</code> below or browse for it.</p>
+
+      <ol class="stepchips"></ol>
+
+      <div class="upload-card">
+        <div class="upload-card-head">
+          <span class="platform-card-name" id="upload-platform-name">Anthropic</span>
+          <span class="platform-card-note" id="upload-platform-note">Claude export (.json)</span>
+        </div>
+
+        <label class="dropzone large" id="dropzone">
+          <input type="file" id="file-input" accept=".json,application/json" hidden>
+          <span class="dropzone-icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M10 13.5V5m0 0L6.5 8.5M10 5l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 13v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+          <span class="dropzone-title">Drop your file here</span>
+          <span class="dropzone-sub">or <span class="link">browse files</span> — .json only (max 512MB)</span>
+        </label>
+
+        <div class="upload-status" id="upload-status" hidden>
+          <div class="spinner"></div>
+          <span id="upload-status-text">Reading your file…</span>
+        </div>
+
+        <p class="error" id="upload-error" hidden></p>
+      </div>
+
+      <p class="privacy">
+        <span class="privacy-check" aria-hidden="true">✓</span>
+        <span><strong>Your file never leaves this machine.</strong> It is parsed entirely by the
+        local app and deleted immediately when you close the session.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Step 3 · edit ────────────────────────────────────────────── -->
+  <section class="page" id="page-3">
+    <div class="page-inner">
+      <button class="back" data-goto="2">← Upload a different file</button>
       <h1>Edit your conversations</h1>
       <p class="lede" id="edit-lede">Redact sensitive information, delete specific turns or the whole conversation from your <code>conversations.json</code>.</p>
 
@@ -76,6 +116,10 @@
         </div>
 
         <div class="toolbar-right">
+          <div class="del-history" role="group" aria-label="Undo or redo a conversation deletion">
+            <button class="icon-btn" id="del-undo" title="Undo delete" aria-label="Undo delete" disabled>&#x21A9;&#xFE0E;</button>
+            <button class="icon-btn" id="del-redo" title="Redo delete" aria-label="Redo delete" disabled>&#x21AA;&#xFE0E;</button>
+          </div>
           <button class="btn delete-btn" id="btn-delete-selected" disabled
                   title="Delete the selected conversations from your working copy">
             <span class="trash-icon" aria-hidden="true">
@@ -125,10 +169,10 @@
     </div>
   </section>
 
-  <!-- ── Step 3 · export ──────────────────────────────────────────── -->
-  <section class="page" id="page-3">
+  <!-- ── Step 4 · export ──────────────────────────────────────────── -->
+  <section class="page" id="page-4">
     <div class="page-inner">
-      <button class="back" data-goto="2">← Back</button>
+      <button class="back" data-goto="3">← Back</button>
       <h1>Review your conversations to export</h1>
       <p class="lede export-lede">Review the conversations and their final sensitivity labels before exporting.</p>
 
@@ -182,46 +226,6 @@
   </section>
 </main>
 
-<!-- ── Upload modal (opens once a platform is picked) ──────────────── -->
-<div class="overlay" id="upload-modal" hidden>
-  <div class="modal upload" role="dialog" aria-modal="true" aria-labelledby="ul-title">
-    <header class="modal-head">
-      <div class="modal-headings">
-        <h2 id="ul-title">Upload your conversation dataset</h2>
-        <p class="modal-sub" id="upload-lede">Drop your <code>conversations.json</code> below or browse for it.</p>
-      </div>
-      <button class="icon-btn" id="upload-close" aria-label="Close">✕</button>
-    </header>
-
-    <div class="modal-body">
-      <div class="upload-platform">
-        <span class="platform-card-name" id="upload-platform-name">Anthropic</span>
-        <span class="platform-card-note" id="upload-platform-note">Claude export &middot; json</span>
-      </div>
-
-      <label class="dropzone" id="dropzone">
-        <input type="file" id="file-input" accept=".json,application/json" hidden>
-        <span class="dropzone-icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none"><path d="M10 13.5V5m0 0L6.5 8.5M10 5l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 13v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </span>
-        <span class="dropzone-title">Drop your file here</span>
-        <span class="dropzone-sub">or <span class="link">browse files</span> — json only (max 512MB)</span>
-      </label>
-
-      <div class="upload-status" id="upload-status" hidden>
-        <div class="spinner"></div>
-        <span id="upload-status-text">Reading your file…</span>
-      </div>
-
-      <p class="error" id="upload-error" hidden></p>
-    </div>
-
-    <footer class="modal-foot">
-      <button class="btn ghost" id="change-platform">← Choose a different platform</button>
-    </footer>
-  </div>
-</div>
-
 <!-- ── Download modal (after a build) ──────────────────────────────── -->
 <div class="overlay" id="download-modal" hidden>
   <div class="modal small" role="dialog" aria-modal="true" aria-labelledby="dl-title">
@@ -261,11 +265,25 @@
           <label class="hl-select-wrap">
             <select class="hl-select" id="hl-select" aria-label="Jump to highlight"></select>
           </label>
-          <button class="redact-btn amber" id="hl-redact" disabled
-                  title="Select a highlight first">Redact</button>
-          <button class="redact-btn blue" id="hl-redact-all"
-                  title="Redact every flagged run in this conversation">Highlight &amp; Redact</button>
+          <button class="redact-btn amber" id="hl-redact-all"
+                  title="Redact everything highlighted in this conversation">Redact all highlighted</button>
         </div>
+        <label class="highlight-mode" id="highlight-mode-wrap"
+               title="Drag-select any text to highlight it for redaction">
+          <input type="checkbox" id="highlight-mode">
+          <span class="switch" aria-hidden="true"></span>
+          <span class="highlight-mode-label">Highlight mode</span>
+        </label>
+        <button class="edit-toggle" id="edit-toggle" aria-pressed="false"
+                title="Show editing tools">
+          <span class="edit-toggle-icon icon-edit" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2L6 12l-2.6.6L4 10l7.5-7.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="edit-toggle-icon icon-exit" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </span>
+          <span class="edit-toggle-label">Edit</span>
+        </button>
         <button class="icon-btn" id="modal-close" aria-label="Close">✕</button>
       </div>
     </header>
@@ -278,9 +296,23 @@
         <span class="foot-status" id="edit-status"></span>
       </div>
       <div class="foot-right">
-        <button class="btn danger-outline" id="modal-delete" data-mode="conversation">Delete Conversation</button>
+        <button class="btn danger-outline" id="modal-delete" data-mode="conversation">Delete Entire Conversation</button>
         <button class="btn primary" id="save-changes">Save Changes</button>
       </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ── Confirm dialog (an in-app popup, so it renders reliably) ──────── -->
+<div class="overlay" id="confirm-modal" hidden>
+  <div class="modal confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-body">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p class="confirm-message" id="confirm-message"></p>
+    </div>
+    <footer class="modal-foot dl-foot">
+      <button class="btn ghost" id="confirm-cancel">Cancel</button>
+      <button class="btn danger" id="confirm-ok">Confirm</button>
     </footer>
   </div>
 </div>

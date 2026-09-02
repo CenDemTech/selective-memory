@@ -20,10 +20,8 @@ const state = {
 };
 
 const STEPS = ['Platform selection', 'Upload', 'Edit', 'Export'];
-// Upload is a modal, not a page of its own, so the chip row has four steps but
-// the app has three pages. This maps the page you're on to the chip that reads
-// active; everything before it is done, everything after is upcoming.
-const PAGE_TO_CHIP = { 1: 1, 2: 3, 3: 4 };
+// Four pages, one per step, so the page number is the active chip directly.
+const PAGE_TO_CHIP = { 1: 1, 2: 2, 3: 3, 4: 4 };
 
 const $ = (id) => document.getElementById(id);
 
@@ -66,7 +64,8 @@ function goTo(step) {
 
   currentPage = step;
   renderSteps();
-  if (step === 3) renderExportTable();
+  if (step === 2) resetUploadPage();
+  if (step === 4) renderExportTable();
 }
 
 document.querySelectorAll('[data-goto]').forEach((btn) => {
@@ -94,32 +93,19 @@ document.querySelectorAll('.platform[data-platform]').forEach((btn) => {
       $('upload-platform-name').textContent = vendor;
       $('upload-platform-note').textContent = `${named} export (.json)`;
     }
-    openUploadModal();
+    resetUploadPage();
+    goTo(2);
   });
 });
 
-/* ── Upload · a modal, not a page ─────────────────────────────────── */
+/* ── Page 2 · upload ──────────────────────────────────────────────── */
 
-/* Opening always starts clean: a stale error from a rejected file shouldn't
+/* Arriving always starts clean: a stale error from a rejected file shouldn't
    greet the next attempt. */
-function openUploadModal() {
+function resetUploadPage() {
   $('upload-error').hidden = true;
   $('upload-status').hidden = true;
-  showOverlay('upload-modal');
 }
-
-// Reached from the Edit page — swapping the file keeps you where you are if you
-// change your mind, and lands you on a fresh table if you don't.
-$('back-to-upload').addEventListener('click', openUploadModal);
-
-$('upload-close').addEventListener('click', () => hideOverlay('upload-modal'));
-
-// The only route back to the platform cards, so page 1 is never a dead end:
-// picking a platform there reopens this modal.
-$('change-platform').addEventListener('click', () => {
-  hideOverlay('upload-modal');
-  goTo(1);
-});
 
 const dropzone = $('dropzone');
 const fileInput = $('file-input');
@@ -180,6 +166,7 @@ async function upload(file) {
     state.selected.clear();
     state.lastBuild = null;
     resetTierFilter();
+    setDeleteHistory(null);   // fresh session — no deletions to undo yet
 
     // Names the file without carrying a count: deleting conversations would
     // leave a count here stale, and the footer already reports the total.
@@ -188,8 +175,7 @@ async function upload(file) {
       `<code>${escapeHtml(data.filename)}</code>.`;
 
     renderTable();
-    hideOverlay('upload-modal');
-    goTo(2);
+    goTo(3);
   } catch (err) {
     $('upload-error').textContent = err.message;
     $('upload-error').hidden = false;
@@ -199,7 +185,7 @@ async function upload(file) {
   }
 }
 
-/* ── Pages 2 & 3 · the table ──────────────────────────────────────── */
+/* ── Pages 3 & 4 · the table ──────────────────────────────────────── */
 
 function formatDate(value) {
   if (!value) return '—';
@@ -233,9 +219,28 @@ function matchesTier(c) {
   return !state.tierFilter.size || state.tierFilter.has(c.sensitivity);
 }
 
+/* A deleted conversation stays in place as a greyed tombstone — struck-through
+   name, no checkbox, no actions — so it's plainly gone but still recoverable
+   with the table's undo-delete button. */
+function tombstoneRowHtml(c) {
+  return `
+    <td class="col-check"></td>
+    <td><div class="name-cell"><div class="name-row"><span class="conv-name deleted-name"
+        title="${escapeAttr(c.name)}">${escapeHtml(c.name)}</span></div></div></td>
+    <td class="muted">${formatDate(c.created_at)}</td>
+    <td class="muted">${formatDate(c.updated_at)}</td>
+    <td class="num">${c.message_count}</td>
+    <td class="num">${c.word_count.toLocaleString()}</td>
+    <td class="num muted">${c.duration}</td>
+    <td>${sensitivityTag(c)}</td>
+    <td class="col-action"><span class="deleted-tag">Deleted</span></td>
+  `;
+}
+
 /* One row builder for both tables — the Export step reuses the Edit step's
    markup so a conversation reads identically wherever it appears. */
 function rowHtml(c) {
+  if (c.deleted) return tombstoneRowHtml(c);
   const edits = (c.redactions || 0) + (c.deletions || 0);
 
   let chip = '', summaryLine = '';
@@ -295,8 +300,11 @@ function fillTbody(tbody, rows, builder = rowHtml) {
   for (const c of rows) {
     const tr = document.createElement('tr');
     tr.dataset.uuid = c.uuid;
-    if (state.selected.has(c.uuid)) tr.classList.add('selected');
-    if ((c.redactions || 0) + (c.deletions || 0)) tr.classList.add('modified');
+    if (c.deleted) tr.classList.add('deleted');
+    else {
+      if (state.selected.has(c.uuid)) tr.classList.add('selected');
+      if ((c.redactions || 0) + (c.deletions || 0)) tr.classList.add('modified');
+    }
     tr.innerHTML = builder(c);
     frag.appendChild(tr);
   }
@@ -314,12 +322,12 @@ function renderTable() {
   fillTbody($('tbody'), state.visible);
   $('empty-state').hidden = state.visible.length > 0;
   updateCounts();
-  document.querySelectorAll('#page-2 th.sortable').forEach((th) => {
+  document.querySelectorAll('#page-3 th.sortable').forEach((th) => {
     th.classList.toggle('asc', th.dataset.sort === state.sort.key && state.sort.dir === 'asc');
     th.classList.toggle('desc', th.dataset.sort === state.sort.key && state.sort.dir === 'desc');
   });
 
-  if (currentPage === 3) renderExportTable();
+  if (currentPage === 4) renderExportTable();
 }
 
 /* The summary line, header checkbox, and CTA — everything that reflects the
@@ -328,9 +336,11 @@ function renderTable() {
 function updateCounts() {
   const shown = state.visible.length;
   const total = state.conversations.length;
+  const deleted = state.conversations.filter((c) => c.deleted).length;
   $('table-summary').textContent =
     `Showing ${shown} of ${total} conversation${total === 1 ? '' : 's'}` +
-    (state.selected.size ? ` · ${state.selected.size} selected` : '');
+    (state.selected.size ? ` · ${state.selected.size} selected` : '') +
+    (deleted ? ` · ${deleted} deleted` : '');
   syncHeaderCheckbox();
   updateExportCta();
   updateDeleteButton();
@@ -338,7 +348,7 @@ function updateCounts() {
 
 /* The Export page lists only what's headed into the file. */
 function renderExportTable() {
-  const picked = state.conversations.filter((c) => state.selected.has(c.uuid));
+  const picked = state.conversations.filter((c) => state.selected.has(c.uuid) && !c.deleted);
   const rows = sortRows(picked.filter(matchesTier));
 
   fillTbody($('export-tbody'), rows, exportRowHtml);
@@ -392,7 +402,7 @@ function resetTierFilter() {
   syncTierPills();
 }
 
-document.querySelectorAll('#page-2 th.sortable').forEach((th) => {
+document.querySelectorAll('#page-3 th.sortable').forEach((th) => {
   th.addEventListener('click', () => {
     const key = th.dataset.sort;
     if (state.sort.key === key) {
@@ -416,6 +426,8 @@ let autoScrollTimer = null;
 const pointer = { x: 0, y: 0 };
 
 const rowsOf = (tbody) => [...tbody.querySelectorAll('tr')];
+// A soft-deleted tombstone row can't be selected.
+const isDeletedRow = (tr) => !!tr && tr.classList.contains('deleted');
 
 /* Sync rows in place instead of re-rendering: rebuilding mid-drag would swap
    the element out from under the cursor and strand the gesture. */
@@ -436,7 +448,7 @@ function applyRange(tbody, from, to, value, base) {
   const [lo, hi] = from <= to ? [from, to] : [to, from];
   for (let i = lo; i <= hi; i++) {
     const uuid = rows[i] && rows[i].dataset.uuid;
-    if (!uuid) continue;
+    if (!uuid || isDeletedRow(rows[i])) continue;   // tombstones aren't selectable
     if (value) state.selected.add(uuid);
     else state.selected.delete(uuid);
   }
@@ -526,7 +538,7 @@ function endDrag() {
   tbody.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || e.target.closest('.review-btn, .row-delete')) return;
     const tr = e.target.closest('tr');
-    if (!tr) return;
+    if (!tr || isDeletedRow(tr)) return;   // can't start a selection on a tombstone
     const rows = rowsOf(tbody);
     const index = rows.indexOf(tr);
 
@@ -571,7 +583,7 @@ function endDrag() {
     }
 
     const tr = e.target.closest('tr');
-    if (!tr) return;
+    if (!tr || isDeletedRow(tr)) return;   // tombstones aren't selectable
     const box = tr.querySelector('.col-check input');
     if (box && e.target !== box) box.checked = !box.checked;
 
@@ -594,6 +606,7 @@ function setSelected(uuid, on) {
 $('check-all').addEventListener('change', (e) => {
   const on = e.target.checked;
   for (const c of state.visible) {
+    if (c.deleted) continue;   // tombstones aren't selectable
     if (on) state.selected.add(c.uuid);
     else state.selected.delete(c.uuid);
   }
@@ -602,9 +615,10 @@ $('check-all').addEventListener('change', (e) => {
 
 function syncHeaderCheckbox() {
   const box = $('check-all');
-  const selectedHere = state.visible.filter((c) => state.selected.has(c.uuid)).length;
-  box.checked = state.visible.length > 0 && selectedHere === state.visible.length;
-  box.indeterminate = selectedHere > 0 && selectedHere < state.visible.length;
+  const selectable = state.visible.filter((c) => !c.deleted);
+  const selectedHere = selectable.filter((c) => state.selected.has(c.uuid)).length;
+  box.checked = selectable.length > 0 && selectedHere === selectable.length;
+  box.indeterminate = selectedHere > 0 && selectedHere < selectable.length;
 }
 
 function updateDeleteButton() {
@@ -623,23 +637,14 @@ function updateExportCta() {
     : 'Review .json file to be exported ';
 }
 
-/* Removing whole conversations rewrites the working copy and can't be undone,
-   so it asks first. The server renumbers what's left and hands back fresh
-   metadata, which replaces the table wholesale — patching the old rows would
-   leave every index after the gap pointing at the wrong conversation. */
+/* Deleting whole conversations is now a soft delete: the server keeps them in
+   the working file but marks them deleted, so each becomes a greyed tombstone in
+   place and can be brought back with the table's undo button. Indices don't
+   move, so the affected rows are just flagged and repainted — no re-render of
+   the whole table, and no confirm (undo is the safety net). */
 async function deleteConversations(uuids) {
   if (!uuids.length || !state.token) return false;
 
-  const names = uuids
-    .map((u) => (state.conversations.find((c) => c.uuid === u) || {}).name)
-    .filter(Boolean);
-  const what = uuids.length === 1
-    ? `“${names[0] || 'this conversation'}”`
-    : `${uuids.length} conversations`;
-  if (!confirm(`Delete ${what} from your working copy? This can't be undone.`)) return false;
-
-  const btn = $('btn-delete-selected');
-  btn.disabled = true;
   try {
     const res = await fetch('/api/delete_conversations', {
       method: 'POST',
@@ -648,31 +653,76 @@ async function deleteConversations(uuids) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not delete those conversations.');
-
-    state.conversations = data.conversations;
-    state.totalInFile = data.total_in_file;
-    state.lastBuild = null;
-    for (const uuid of uuids) state.selected.delete(uuid);
-    anchorUuid = null;   // the row it pointed at may be gone
-
-    renderTable();
-    // Nothing left to export means nothing to be on the Export page for.
-    if (currentPage === 3 && state.selected.size === 0) goTo(2);
+    applyDeletion(data.deleted, true, data);
     return true;
   } catch (err) {
     alert(err.message);
     return false;
-  } finally {
-    updateDeleteButton();
   }
 }
+
+/* Flag a set of conversations deleted (or restored) in the local state, drop
+   them from the selection, and repaint. Shared by delete, undo, and redo. */
+function applyDeletion(uuids, deleted, flags) {
+  const set = new Set(uuids || []);
+  for (const c of state.conversations) {
+    if (set.has(c.uuid)) c.deleted = deleted;
+  }
+  if (deleted) for (const uuid of set) state.selected.delete(uuid);
+  state.lastBuild = null;
+  anchorUuid = null;
+  setDeleteHistory(flags);
+  renderTable();
+  // If a delete emptied the export selection, there's nothing to be on that page for.
+  if (currentPage === 4 && state.selected.size === 0) goTo(3);
+}
+
+function setDeleteHistory(flags) {
+  $('del-undo').disabled = !(flags && flags.can_undo_delete);
+  $('del-redo').disabled = !(flags && flags.can_redo_delete);
+}
+
+async function undoDelete() {
+  if (!state.token || $('del-undo').disabled) return;
+  try {
+    const res = await fetch('/api/undo_delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not undo.');
+    applyDeletion(data.restored, false, data);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function redoDelete() {
+  if (!state.token || $('del-redo').disabled) return;
+  try {
+    const res = await fetch('/api/redo_delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not redo.');
+    applyDeletion(data.deleted, true, data);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+$('del-undo').addEventListener('click', undoDelete);
+$('del-redo').addEventListener('click', redoDelete);
 
 $('btn-delete-selected').addEventListener('click', () => {
   deleteConversations([...state.selected]);
 });
 
 $('btn-to-export').addEventListener('click', () => {
-  if (state.selected.size > 0) goTo(3);
+  if (state.selected.size > 0) goTo(4);
 });
 
 /* ── Highlight finder ─────────────────────────────────────────────── */
@@ -686,9 +736,15 @@ let hlIndex = -1;   // -1 means "nothing parked on yet"
 function resetHighlightNav() {
   highlights = [...$('modal-body').querySelectorAll('mark.hl')];
   hlIndex = -1;
-  $('hl-nav').hidden = highlights.length === 0;
+  const empty = highlights.length === 0;
+  // The finder is always present in edit mode so the header reads the same on
+  // every conversation; a green one just shows it greyed and stateless. In
+  // review mode there's nothing to navigate when empty, so it stays hidden.
+  $('hl-nav').hidden = false;
+  $('transcript-modal').classList.toggle('no-highlights', empty);
+  $('hl-select').disabled = empty;
+  $('hl-redact-all').disabled = empty;
   rebuildHighlightSelect();
-  updateRedactButton();
 }
 
 /* The leading option is a count-only placeholder ("4 highlights"); the rest are
@@ -696,7 +752,7 @@ function resetHighlightNav() {
 function rebuildHighlightSelect() {
   const sel = $('hl-select');
   const n = highlights.length;
-  const opts = [`<option value="-1">${n} highlight${n === 1 ? '' : 's'}</option>`];
+  const opts = [`<option value="-1">${n} Highlight${n === 1 ? '' : 's'} Detected</option>`];
   for (let i = 0; i < n; i++) {
     const tier = highlights[i].classList.contains('red') ? 'Red'
                : highlights[i].classList.contains('yellow') ? 'Yellow' : '';
@@ -735,12 +791,22 @@ function selectHighlight(index) {
   const delta = markRect.top - bodyRect.top - (body.clientHeight - markRect.height) / 2;
   body.scrollTop += delta;
 
-  updateRedactButton();
+  // In edit mode, parking on a highlight offers a Delete button over it.
+  updateTextFab();
+}
+
+/* Park nothing: drop the ring, reset the dropdown, and clear the Delete button. */
+function deselectHighlight() {
+  if (hlIndex >= 0 && highlights[hlIndex]) highlights[hlIndex].classList.remove('current');
+  hlIndex = -1;
+  $('hl-select').value = '-1';
+  updateTextFab();
 }
 
 $('hl-select').addEventListener('change', (e) => {
   const i = Number(e.target.value);
   if (i >= 0) selectHighlight(i);
+  else deselectHighlight();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -828,9 +894,187 @@ function renderTurn(msgs, i) {
 /* The conversation the modal is currently showing. */
 let openConv = null;
 
+/* The Review modal opens read-only; the Edit button reveals the editing tools
+   (redact buttons, per-turn/message checkboxes and trash, delete, save, and
+   drag-to-delete). This is independent of a conversation's sensitivity, so a
+   green conversation can be edited the same way. */
+let editing = false;
+// The edit tally at the moment edit mode was entered, so an exit can tell
+// whether unsaved changes were made in this session.
+let editBaselineRevisions = 0;
+
+function currentRevisions() {
+  return openConv ? (openConv.redactions || 0) + (openConv.deletions || 0) : 0;
+}
+
+function setEditing(on) {
+  editing = on;
+  $('transcript-modal').classList.toggle('editing', on);
+  const btn = $('edit-toggle');
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.querySelector('.edit-toggle-label').textContent = on ? 'Exit Edit' : 'Edit';
+  btn.title = on ? 'Exit editing' : 'Show editing tools';
+  if (on) {
+    editBaselineRevisions = currentRevisions();
+  } else {
+    // Leaving edit mode drops any pending message selection and highlight mode.
+    state.msgSelection.clear();
+    document.querySelectorAll('#modal-body .msg-selected').forEach((el) => {
+      el.classList.remove('msg-selected');
+      const box = el.querySelector('.msg-check');
+      if (box) box.checked = false;
+    });
+    setHighlightMode(false);
+    deselectHighlight();
+    refreshTurnControls();
+    updateModalDeleteButton();
+  }
+}
+
+/* Exit edit mode back to the read-only view (staying in the modal). If edits
+   were made this session and not saved, confirm first and roll them back to the
+   state you entered on — that's what "exit without saving" means here, since
+   every edit is otherwise written straight to the working copy. */
+async function exitEditMode() {
+  if (currentRevisions() !== editBaselineRevisions) {
+    const ok = await confirmDialog(
+      'You made changes to the conversation without saving. Are you sure you want to exit without saving?',
+      { title: 'Exit without saving?', okLabel: 'Exit without saving', okClass: 'danger' }
+    );
+    if (!ok) return;
+    let guard = 0;
+    while (openConv && currentRevisions() > editBaselineRevisions &&
+           !$('undo-btn').disabled && guard++ < 200) {
+      await runHistory('undo');
+    }
+  }
+  setEditing(false);
+}
+
+$('edit-toggle').addEventListener('click', () => {
+  if (editing) exitEditMode();
+  else setEditing(true);
+});
+
+/* ── Highlight mode ───────────────────────────────────────────────────
+   In edit mode, turning this on lets you drag-select any run of text inside a
+   message — the selection turns red — and a floating Delete button appears just
+   above it. One click redacts exactly that run (boxed like any redaction). With
+   the toggle off, selecting text does nothing special. */
+let highlightMode = false;
+let pendingTextDelete = null;
+
+function setHighlightMode(on) {
+  highlightMode = on;
+  $('highlight-mode').checked = on;
+  // NB: a distinct class name — `.highlight-mode` is the toggle *label*, and
+  // reusing it here would drop that label's `user-select:none` onto the whole
+  // modal and make the transcript unselectable. `hl-mode` also paints the
+  // selection red.
+  $('transcript-modal').classList.toggle('hl-mode', on);
+  if (!on) hideTextFab();
+}
+
+$('highlight-mode').addEventListener('change', (e) => setHighlightMode(e.target.checked));
+
+/* Count which copy of ``text`` sits at the start of ``range`` within ``bubble``,
+   so the server redacts that instance rather than every match. */
+function occurrenceBefore(bubble, range, text) {
+  const pre = document.createRange();
+  pre.selectNodeContents(bubble);
+  pre.setStart(bubble, 0);
+  pre.setEnd(range.startContainer, range.startOffset);
+  return pre.toString().split(text).length - 1;
+}
+
+function positionFab(rect) {
+  const fab = $('text-delete-fab');
+  fab.hidden = false;
+  fab.style.left = `${rect.left + rect.width / 2}px`;
+  fab.style.top = `${rect.top - 8}px`;
+}
+
+/* The floating Delete button, above whatever is currently targeted for
+   redaction (edit mode only). Two things can target it: a live text drag inside
+   a bubble while Highlight mode is on, or a sensitivity highlight the finder is
+   parked on. Either sets `pendingTextDelete` and shows the button over it. */
+function updateTextFab() {
+  if ($('transcript-modal').hidden || !editing) return hideTextFab();
+  const sel = window.getSelection();
+
+  // 1) Highlight mode: a live drag-selection inside one bubble.
+  if (highlightMode && sel && !sel.isCollapsed && sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    const bubble = bubbleOf(range.startContainer);
+    const msg = bubble && bubble.closest('.msg');
+    const selected = range.toString();
+    if (bubble && bubble === bubbleOf(range.endContainer) &&
+        msg && msg.dataset.msg && selected.trim()) {
+      pendingTextDelete = {
+        message_uuid: msg.dataset.msg,
+        text: selected,
+        occurrence: occurrenceBefore(bubble, range, selected),
+      };
+      positionFab(range.getBoundingClientRect());
+      return;
+    }
+  }
+
+  // 2) A sensitivity highlight the finder is parked on — offer to redact it.
+  if (hlIndex >= 0 && highlights[hlIndex]) {
+    const mark = highlights[hlIndex];
+    const bubble = mark.closest('.bubble');
+    const msg = mark.closest('.msg');
+    if (bubble && msg && msg.dataset.msg) {
+      const markRange = document.createRange();
+      markRange.selectNode(mark);
+      pendingTextDelete = {
+        message_uuid: msg.dataset.msg,
+        text: mark.textContent,
+        occurrence: occurrenceBefore(bubble, markRange, mark.textContent),
+      };
+      positionFab(mark.getBoundingClientRect());
+      return;
+    }
+  }
+
+  hideTextFab();
+}
+
+document.addEventListener('selectionchange', updateTextFab);
+$('modal-body').addEventListener('scroll', () => {
+  if (!$('text-delete-fab').hidden) updateTextFab();
+});
+
+// Pressing the button must not collapse the selection before the click lands.
+$('text-delete-fab').addEventListener('mousedown', (e) => e.preventDefault());
+
+$('text-delete-fab').addEventListener('click', async () => {
+  if (!openConv || !pendingTextDelete) return;
+  const body = { token: state.token, conversation_uuid: openConv.uuid, ...pendingTextDelete };
+  try {
+    const res = await fetch('/api/delete_text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not delete that text.');
+
+    window.getSelection().removeAllRanges();
+    hideTextFab();
+    applyEditedRow(data);
+    setUndoRedo(data);
+    await loadTranscript();  // server hands the boxed run back as a segment
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
 function openTranscript(index) {
   openConv = state.conversations.find((c) => c.index === index) || null;
   state.msgSelection.clear();
+  setEditing(false);   // always open read-only
   $('modal-title').textContent = openConv ? openConv.name : 'Conversation';
   $('modal-sub').textContent = '';
   $('modal-body').innerHTML = '<div class="spinner"></div>';
@@ -902,23 +1146,29 @@ async function loadTranscript() {
   }
 }
 
-/* Edits are written to the working copy as they're made, so this is a plain
-   "done" — it closes the modal with everything already persisted. */
+/* Edits are written to the working copy as they're made, so Save Changes is a
+   "keep these and step out of edit mode" — it leaves the review window open,
+   just no longer editing, and marks this session's edits as saved (so exiting
+   afterwards won't warn). */
 $('save-changes').addEventListener('click', () => {
   hideTextFab();
-  hideOverlay('transcript-modal');
+  setEditing(false);
 });
 
 /* ── Redaction ────────────────────────────────────────────────────── */
 
-// Clicking a flagged run selects it, so Redact has an unambiguous target.
+// Selecting a flagged run is an edit-mode action: clicking parks the finder on
+// it (and shows a Delete button over it); clicking the selected one unclicks it.
 $('modal-body').addEventListener('click', (e) => {
+  if (!editing) return;
   // A drag that ends on a highlight is a text selection, not a click.
   if (!window.getSelection().isCollapsed) return;
   const mark = e.target.closest('mark.hl');
   if (!mark) return;
   const at = highlights.indexOf(mark);
-  if (at >= 0) selectHighlight(at);
+  if (at < 0) return;
+  if (at === hlIndex) deselectHighlight();
+  else selectHighlight(at);
 });
 
 /* A redaction leaves a grey box with the removed text greyed out inside, so it's
@@ -927,70 +1177,47 @@ $('modal-body').addEventListener('click', (e) => {
    segment, so the box is rendered from the reloaded transcript and persists
    across undo/redo and reopening. */
 
-// "Redact" (amber): remove the run currently parked on in the dropdown.
-$('hl-redact').addEventListener('click', async () => {
-  if (hlIndex < 0 || !openConv) return;
-  const mark = highlights[hlIndex];
-  const button = $('hl-redact');
+/* "Redact all highlighted": redact every highlight in the conversation at once —
+   the flagged runs the classifier detected plus any you added by hand in
+   Highlight mode. Each highlight is boxed via /api/delete_text, which wraps the
+   leftmost still-visible copy of its text; taking the marks in document order
+   and always passing occurrence 0 boxes them left-to-right without shifting the
+   ones still to come (a boxed run stops counting as visible). One reload at the
+   end renders the persistent boxes. */
+$('hl-redact-all').addEventListener('click', async () => {
+  if (!openConv) return;
+  const button = $('hl-redact-all');
+  const targets = [...$('modal-body').querySelectorAll('mark.hl')]
+    .map((m) => ({ message_uuid: m.dataset.msg, text: m.textContent }))
+    .filter((t) => t.message_uuid && t.text);
+  if (!targets.length) return;
 
   button.disabled = true;
   try {
-    const res = await fetch('/api/redact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: state.token,
-        conversation_uuid: openConv.uuid,
-        message_uuid: mark.dataset.msg,
-        text: mark.textContent,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Could not redact that text.');
-
-    applyEditedRow(data);
-    setUndoRedo(data);
+    let last = null;
+    for (const t of targets) {
+      try {
+        const res = await fetch('/api/delete_text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: state.token,
+            conversation_uuid: openConv.uuid,
+            message_uuid: t.message_uuid,
+            text: t.text,
+            occurrence: 0,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) last = data;
+      } catch (_) { /* skip a run that can't be matched and keep going */ }
+    }
+    if (last) { applyEditedRow(last); setUndoRedo(last); }
     await loadTranscript();
   } catch (err) {
     alert(err.message);
   } finally {
-    updateRedactButton();
-  }
-});
-
-/* "Highlight & Redact" (blue): remove every flagged run in the conversation.
-   Redacting always removes a still-flagged run, so re-scan and take the first
-   one each pass until none remain — the guard just bounds a pathological loop. */
-$('hl-redact-all').addEventListener('click', async () => {
-  if (!openConv) return;
-  const button = $('hl-redact-all');
-  button.disabled = true;
-  try {
-    let guard = 0;
-    while (guard++ < 500) {
-      const mark = $('modal-body').querySelector('mark.hl');
-      if (!mark) break;
-      const res = await fetch('/api/redact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: state.token,
-          conversation_uuid: openConv.uuid,
-          message_uuid: mark.dataset.msg,
-          text: mark.textContent,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not redact that text.');
-      applyEditedRow(data);
-      setUndoRedo(data);
-      await loadTranscript();
-    }
-  } catch (err) {
-    alert(err.message);
-  } finally {
     button.disabled = false;
-    updateRedactButton();
   }
 });
 
@@ -1134,7 +1361,7 @@ function updateModalDeleteButton() {
     btn.textContent = `Delete ${n} message${n === 1 ? '' : 's'}`;
   } else {
     btn.dataset.mode = 'conversation';
-    btn.textContent = 'Delete Conversation';
+    btn.textContent = 'Delete Entire Conversation';
   }
 }
 
@@ -1188,10 +1415,7 @@ document.addEventListener('keydown', (e) => {
   else if (key === 'y') { e.preventDefault(); runHistory('redo'); }
 });
 
-/* ── Advanced settings · delete an arbitrary text selection ───────── */
-
-let pendingTextDelete = null;
-
+/* Locate the message bubble a DOM node sits in (used by Highlight mode). */
 function bubbleOf(node) {
   const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
   return el ? el.closest('.bubble') : null;
@@ -1200,75 +1424,6 @@ function bubbleOf(node) {
 function hideTextFab() {
   $('text-delete-fab').hidden = true;
   pendingTextDelete = null;
-}
-
-// Show a floating Delete above the current selection when it sits inside a
-// single message bubble.
-function updateTextFab() {
-  if ($('transcript-modal').hidden) return hideTextFab();
-  const sel = window.getSelection();
-  if (!sel || sel.isCollapsed || !sel.rangeCount) return hideTextFab();
-
-  const range = sel.getRangeAt(0);
-  const bubble = bubbleOf(range.startContainer);
-  if (!bubble || bubble !== bubbleOf(range.endContainer)) return hideTextFab();
-  const msg = bubble.closest('.msg');
-  const uuid = msg && msg.dataset.msg;
-  const selected = sel.toString();
-  if (!uuid || !selected.trim()) return hideTextFab();
-
-  // Which copy of the selected string this is — count identical runs before it,
-  // so the server redacts the highlighted instance, not every match.
-  const pre = document.createRange();
-  pre.selectNodeContents(bubble);
-  pre.setEnd(range.startContainer, range.startOffset);
-  const occurrence = pre.toString().split(selected).length - 1;
-  pendingTextDelete = { message_uuid: uuid, text: selected, occurrence };
-
-  const rect = range.getBoundingClientRect();
-  const fab = $('text-delete-fab');
-  fab.hidden = false;
-  fab.style.left = `${rect.left + rect.width / 2}px`;
-  fab.style.top = `${rect.top - 8}px`;
-}
-
-document.addEventListener('selectionchange', updateTextFab);
-$('modal-body').addEventListener('scroll', () => {
-  if (!$('text-delete-fab').hidden) updateTextFab();
-});
-
-// Pressing the button must not collapse the selection before the click lands.
-$('text-delete-fab').addEventListener('mousedown', (e) => e.preventDefault());
-
-$('text-delete-fab').addEventListener('click', async () => {
-  if (!openConv || !pendingTextDelete) return;
-  const body = { token: state.token, conversation_uuid: openConv.uuid, ...pendingTextDelete };
-  try {
-    const res = await fetch('/api/delete_text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Could not delete that text.');
-
-    window.getSelection().removeAllRanges();
-    hideTextFab();
-    applyEditedRow(data);
-    setUndoRedo(data);
-    await loadTranscript();  // server hands the boxed run back as a segment
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-function updateRedactButton() {
-  const button = $('hl-redact');
-  const ready = hlIndex >= 0;
-  button.disabled = !ready;
-  button.title = ready
-    ? `Delete “${highlights[hlIndex].textContent}” from this conversation`
-    : 'Select a highlight first';
 }
 
 /* ── Overlay helpers ──────────────────────────────────────────────── */
@@ -1286,6 +1441,43 @@ function hideOverlay(id) {
   setTimeout(() => { el.hidden = true; }, 250);
 }
 
+/* An in-app confirm dialog. Returns a promise resolving true/false. Used instead
+   of the browser's native confirm(), which is silently suppressed inside some
+   embedded/preview browsers — so the warning would never appear. */
+function confirmDialog(message, opts = {}) {
+  return new Promise((resolve) => {
+    $('confirm-title').textContent = opts.title || 'Are you sure?';
+    $('confirm-message').textContent = message;
+    const ok = $('confirm-ok');
+    const cancel = $('confirm-cancel');
+    ok.textContent = opts.okLabel || 'Confirm';
+    ok.className = `btn ${opts.okClass || 'danger'}`;
+    showOverlay('confirm-modal');
+    setTimeout(() => ok.focus(), 0);
+
+    const finish = (result) => {
+      hideOverlay('confirm-modal');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      $('confirm-modal').removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey, true);
+      resolve(result);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    const onBackdrop = (e) => { if (e.target === $('confirm-modal')) finish(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); finish(false); }
+      else if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); finish(true); }
+    };
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    $('confirm-modal').addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey, true);
+  });
+}
+
+// The close ✕ is hidden while editing (see CSS); in review it closes the modal.
 $('modal-close').addEventListener('click', () => {
   hideTextFab();
   hideOverlay('transcript-modal');
@@ -1293,13 +1485,20 @@ $('modal-close').addEventListener('click', () => {
 
 document.querySelectorAll('.overlay').forEach((overlay) => {
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) hideOverlay(overlay.id);
+    if (e.target !== overlay) return;
+    if (overlay.id === 'confirm-modal') return;  // confirmDialog owns its backdrop
+    // You must leave edit mode before the conversation can be closed, so a
+    // backdrop click in edit mode exits edit mode instead of closing.
+    if (overlay.id === 'transcript-modal' && editing) { exitEditMode(); return; }
+    hideOverlay(overlay.id);
   });
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   hideTextFab();
+  // Same rule for Escape: in edit mode it exits editing rather than closing.
+  if (!$('transcript-modal').hidden && editing) { exitEditMode(); return; }
   document.querySelectorAll('.overlay:not([hidden])').forEach((o) => hideOverlay(o.id));
 });
 

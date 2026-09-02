@@ -101,11 +101,19 @@ def upload():
     # message-list snapshots plus a cursor. Redactions and deletions both push a
     # new snapshot; undo/redo just move the cursor. Cumulative edit tallies ride
     # on each snapshot so the modified-row counts move with undo/redo too.
+    # `deleted` is the set of whole-conversation uuids soft-deleted this session:
+    # they stay in the working file (so a delete can be undone) but are shown as
+    # tombstones and left out of the export. `delete_undo`/`delete_redo` are the
+    # stacks of deletion actions (each a list of uuids removed together) that
+    # drive the table's undo/redo-delete buttons.
     SESSIONS[token] = {
         "source": source,
         "result": None,
         "platform": platform,
         "history": {},
+        "deleted": set(),
+        "delete_undo": [],
+        "delete_redo": [],
     }
 
     return jsonify(
@@ -316,15 +324,23 @@ def _history_request():
     return session, conversation_uuid, None
 
 
+def _delete_flags(session):
+    return {
+        "can_undo_delete": bool(session["delete_undo"]),
+        "can_redo_delete": bool(session["delete_redo"]),
+    }
+
+
 @app.route("/api/delete_conversations", methods=["POST"])
 def delete_conversations():
-    """Drop whole conversations from the working copy.
+    """Soft-delete whole conversations.
 
-    Unlike the message-level edits above this is not undoable, so the client
-    confirms first. Removing entries renumbers everything after them — the row
-    indices the client holds are positions in the listed set — so the fresh
-    metadata is returned for the caller to re-render from rather than trying to
-    patch the old rows.
+    Rather than rewriting the file (which renumbered every following row and
+    couldn't be undone), the uuids are added to the session's `deleted` set. The
+    conversation stays in the working file, so the client shows it as a greyed
+    tombstone in place and the deletion can be reversed with undo — the export
+    just skips anything in the set. Indices don't move, so the client patches the
+    affected rows rather than re-rendering the whole table.
     """
     payload = request.get_json(silent=True) or {}
     session, error = _require_session(payload.get("token"))
@@ -337,28 +353,49 @@ def delete_conversations():
 
     parser = _parser(session)
     id_field = parser.ID_FIELD
-    raw = parser.load_raw(session["source"])
-    kept = [c for c in raw if c.get(id_field) not in selected]
-
-    removed = len(raw) - len(kept)
-    if not removed:
+    existing = {c.get(id_field) for c in parser.load_raw(session["source"])}
+    to_delete = [u for u in selected if u in existing and u not in session["deleted"]]
+    if not to_delete:
         return jsonify({"error": "Those conversations are no longer in the file."}), 400
 
-    # Whole-list rewrite, so it stays parser-agnostic: only ID_FIELD differs.
-    with open(session["source"], "w") as f:
-        json.dump(kept, f, ensure_ascii=False)
-
-    for conversation_uuid in selected:
-        session["history"].pop(conversation_uuid, None)
+    session["deleted"].update(to_delete)
+    session["delete_undo"].append(to_delete)
+    session["delete_redo"].clear()
     session["result"] = None  # any file built before this delete is now stale
 
-    return jsonify(
-        {
-            "removed": removed,
-            "total_in_file": len(kept),
-            "conversations": parser.build_metadata(session["source"]) if kept else [],
-        }
-    )
+    return jsonify({"deleted": to_delete, **_delete_flags(session)})
+
+
+@app.route("/api/undo_delete", methods=["POST"])
+def undo_delete():
+    """Restore the conversations removed by the most recent delete action."""
+    session, error = _require_session((request.get_json(silent=True) or {}).get("token"))
+    if error:
+        return error
+    if not session["delete_undo"]:
+        return jsonify({"error": "Nothing to undo."}), 400
+
+    action = session["delete_undo"].pop()
+    session["deleted"].difference_update(action)
+    session["delete_redo"].append(action)
+    session["result"] = None
+    return jsonify({"restored": action, **_delete_flags(session)})
+
+
+@app.route("/api/redo_delete", methods=["POST"])
+def redo_delete():
+    """Re-apply the delete action that was last undone."""
+    session, error = _require_session((request.get_json(silent=True) or {}).get("token"))
+    if error:
+        return error
+    if not session["delete_redo"]:
+        return jsonify({"error": "Nothing to redo."}), 400
+
+    action = session["delete_redo"].pop()
+    session["deleted"].update(action)
+    session["delete_undo"].append(action)
+    session["result"] = None
+    return jsonify({"deleted": action, **_delete_flags(session)})
 
 
 @app.route("/api/build", methods=["POST"])
@@ -378,11 +415,13 @@ def build():
 
     parser = _parser(session)
     id_field = parser.ID_FIELD
+    deleted = session.get("deleted", set())
     raw = parser.load_raw(session["source"])
+    # Soft-deleted conversations never reach the export, whichever build mode.
     if mode == "export":
-        filtered = [c for c in raw if c.get(id_field) in selected]
+        filtered = [c for c in raw if c.get(id_field) in selected and c.get(id_field) not in deleted]
     else:
-        filtered = [c for c in raw if c.get(id_field) not in selected]
+        filtered = [c for c in raw if c.get(id_field) not in selected and c.get(id_field) not in deleted]
 
     # Strip redaction markers (and their content) so nothing redacted reaches the
     # download. Parsers that don't do redaction fall back to an identity copy.

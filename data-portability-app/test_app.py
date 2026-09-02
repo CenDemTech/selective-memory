@@ -726,6 +726,83 @@ def test_rejected_inputs():
     assert c.get("/api/transcript?token=nope&index=0").status_code == 404
     assert c.get(f"/api/download?token={token}").status_code == 400  # nothing built yet
 
+
+# --------------------------------------------------------------------------
+# Soft-deleting whole conversations, with undo / redo
+# --------------------------------------------------------------------------
+
+def test_deleted_conversation_is_soft_and_excluded_from_export():
+    c = client()
+    _, data = upload(c)
+    token = data["token"]
+    victim = data["conversations"][0]["uuid"]
+    keep = data["conversations"][1]["uuid"]
+
+    res = c.post("/api/delete_conversations", json={"token": token, "uuids": [victim]})
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["deleted"] == [victim]
+    assert body["can_undo_delete"] and not body["can_redo_delete"]
+
+    # The row is still parseable (soft delete keeps it in the file)...
+    listed = flask_app.claude_parser.list_conversations(
+        flask_app.claude_parser.load_raw(flask_app.SESSIONS[token]["source"]))
+    assert victim in {conv["uuid"] for conv in listed}
+
+    # ...but it's kept out of the export, even when explicitly selected.
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [victim, keep]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    ids = [conv["uuid"] for conv in out]
+    assert victim not in ids and keep in ids
+
+
+def test_delete_can_be_undone_and_redone():
+    c = client()
+    _, data = upload(c)
+    token = data["token"]
+    victim = data["conversations"][2]["uuid"]
+
+    c.post("/api/delete_conversations", json={"token": token, "uuids": [victim]})
+
+    undo = c.post("/api/undo_delete", json={"token": token}).get_json()
+    assert undo["restored"] == [victim]
+    assert not undo["can_undo_delete"] and undo["can_redo_delete"]
+
+    # Undone: it exports again.
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [victim]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    assert victim in [conv["uuid"] for conv in out]
+
+    redo = c.post("/api/redo_delete", json={"token": token}).get_json()
+    assert redo["deleted"] == [victim]
+    assert redo["can_undo_delete"] and not redo["can_redo_delete"]
+
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [victim]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    assert victim not in [conv["uuid"] for conv in out]
+
+
+def test_a_fresh_delete_clears_the_redo_stack():
+    c = client()
+    _, data = upload(c)
+    token = data["token"]
+    a = data["conversations"][0]["uuid"]
+    b = data["conversations"][1]["uuid"]
+
+    c.post("/api/delete_conversations", json={"token": token, "uuids": [a]})
+    c.post("/api/undo_delete", json={"token": token})            # redo now available
+    body = c.post("/api/delete_conversations", json={"token": token, "uuids": [b]}).get_json()
+    assert not body["can_redo_delete"]                           # a new delete drops it
+    assert c.post("/api/redo_delete", json={"token": token}).status_code == 400
+
+
+def test_undo_or_redo_delete_past_the_ends_is_rejected():
+    c = client()
+    _, data = upload(c)
+    token = data["token"]
+    assert c.post("/api/undo_delete", json={"token": token}).status_code == 400
+    assert c.post("/api/redo_delete", json={"token": token}).status_code == 400
+
     bad = c.post(
         "/api/upload",
         data={"platform": "claude", "file": (io.BytesIO(b"{not json"), "x.json")},

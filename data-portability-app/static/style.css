@@ -270,20 +270,22 @@ code {
 .platform-name { font-weight: 600; font-size: 15px; }
 .platform-note { color: var(--ink-faint); font-size: 12.5px; }
 
-/* ── Upload modal · the platform strip above the dropzone ─────────── */
-/* Restates which platform was picked, so a wrong choice is obvious before a
-   file is committed to it. */
-.upload-platform {
+/* ── Page 2 · upload ──────────────────────────────────────────────── */
+/* A card holding the platform it will be read as, then a large dropzone. */
+.upload-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 22px;
+}
+.upload-card-head {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 10px 13px;
-  margin-bottom: 14px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  margin-bottom: 16px;
 }
-.platform-card-name { font-weight: 600; font-size: 14px; }
+.platform-card-name { font-weight: 600; font-size: 15px; }
 .platform-card-note { color: var(--ink-faint); font-size: 12.5px; }
 
 .dropzone {
@@ -299,6 +301,8 @@ code {
   text-align: center;
   transition: border-color .2s var(--ease), background .2s var(--ease);
 }
+/* The full-page dropzone is roomier than the old modal one. */
+.dropzone.large { padding: 96px 24px; }
 .dropzone:hover { border-color: var(--blue-line); background: rgba(46, 107, 246, .05); }
 .dropzone.dragging { border-color: var(--blue); background: var(--blue-soft); }
 .dropzone-icon {
@@ -599,6 +603,30 @@ input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue); c
 .delete-btn .trash-icon { display: flex; }
 .delete-btn .trash-icon svg { width: 15px; height: 15px; }
 
+/* Undo / redo a conversation deletion, beside the Delete button. The hooked
+   arrows are flipped so the hook sits on top, matching the modal's undo/redo. */
+.del-history { display: inline-flex; align-items: center; gap: 2px; }
+.del-history .icon-btn { transform: scaleY(-1); font-size: 15px; }
+.del-history .icon-btn:hover:not(:disabled) { background: var(--tint-strong); color: var(--ink); }
+
+/* A soft-deleted conversation stays in place as a greyed tombstone. */
+.conv-table tbody tr.deleted td { background: var(--tint); color: var(--ink-faint); }
+.conv-table tbody tr.deleted:hover td { background: var(--tint); }
+.conv-table tbody tr.deleted .muted,
+.conv-table tbody tr.deleted .conv-name { color: var(--ink-faint); }
+.conv-table tbody tr.deleted .tag { opacity: .45; }
+.deleted-name { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.deleted-tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: var(--tint-strong);
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
 /* The Export page's read-only tally columns. */
 .export-lede { color: var(--blue-bright); }
 .count-pill {
@@ -740,6 +768,14 @@ body.is-advanced .review-btn:hover {
 .modal.upload { width: min(560px, 100%); }
 .dl-foot { justify-content: flex-end; }
 
+/* Confirm dialog — sits above everything else, including an open transcript. */
+#confirm-modal { z-index: 80; }
+.modal.confirm { width: min(440px, 100%); }
+.confirm-body { padding: 20px 20px 6px; }
+.confirm-body h2 { margin-bottom: 8px; }
+.confirm-message { margin: 0; color: var(--ink-soft); font-size: 13.5px; line-height: 1.55; }
+#confirm-modal .modal-foot { gap: 8px; }
+
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -775,6 +811,7 @@ body.is-advanced .review-btn:hover {
   background-position: right 8px center;
 }
 .hl-select:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+.hl-select:disabled { opacity: .55; cursor: default; }
 
 .redact-btn {
   padding: 6px 12px;
@@ -794,6 +831,111 @@ body.is-advanced .review-btn:hover {
 /* Redact every run — the primary blue. */
 .redact-btn.blue { background: var(--blue); color: var(--white); }
 .redact-btn.blue:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+
+/* Edit toggle — reveals the editing tools. Blue while off (an invitation to
+   edit), quiet once on (it now reads "Done"). Always visible, so any
+   conversation, green ones included, can be edited. */
+.edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--blue);
+  color: var(--white);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease);
+}
+.edit-toggle:hover { background: var(--blue-hover); }
+.edit-toggle-icon { display: inline-flex; }
+.edit-toggle-icon svg { width: 14px; height: 14px; display: block; }
+/* Swap the pencil (enter) for an ✕ (exit) once editing is on. */
+.edit-toggle .icon-exit { display: none; }
+.edit-toggle[aria-pressed="true"] .icon-edit { display: none; }
+.edit-toggle[aria-pressed="true"] .icon-exit { display: inline-flex; }
+.edit-toggle[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.edit-toggle[aria-pressed="true"]:hover { background: var(--tint-strong); }
+
+/* Highlight-mode switch — a slider toggle that turns drag-select-to-highlight
+   on. Only shown in edit mode. */
+.highlight-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  user-select: none;
+  white-space: nowrap;
+}
+.highlight-mode input { position: absolute; opacity: 0; width: 0; height: 0; }
+.highlight-mode .switch {
+  position: relative;
+  width: 34px; height: 18px;
+  flex-shrink: 0;
+  border-radius: 99px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.highlight-mode .switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  transition: transform .15s var(--ease), background .15s var(--ease);
+}
+.highlight-mode input:checked + .switch { background: var(--blue); border-color: var(--blue); }
+.highlight-mode input:checked + .switch::after { transform: translateX(16px); background: var(--white); }
+.highlight-mode input:checked ~ .highlight-mode-label { color: var(--ink); }
+.highlight-mode input:focus-visible + .switch { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* With Highlight mode on, a text selection turns red — it's a delete target, not
+   ordinary copying — and the floating Delete button appears above it. */
+#transcript-modal.hl-mode .bubble::selection,
+#transcript-modal.hl-mode .bubble *::selection { background: var(--danger-solid); color: var(--white); }
+#transcript-modal.hl-mode .bubble { cursor: text; }
+
+/* ── Review vs. Edit mode ─────────────────────────────────────────────
+   The modal opens read-only: the transcript, the highlight finder, undo/redo,
+   and the revision count are all you see. The Edit button adds the `editing`
+   class, which reveals the tools that actually change the conversation and
+   swaps itself out for them. */
+#transcript-modal .redact-btn,
+#transcript-modal .edit-controls,
+#transcript-modal .highlight-mode,
+#transcript-modal .foot-right { display: none; }
+/* The finder is hidden in review only when there are no highlights to step
+   through; edit mode always shows it (greyed when the conversation is green). */
+#transcript-modal:not(.editing).no-highlights #hl-nav { display: none; }
+#transcript-modal.editing .redact-btn { display: inline-block; }
+#transcript-modal.editing .highlight-mode { display: inline-flex; }
+#transcript-modal.editing .foot-right { display: flex; }
+/* The close ✕ is replaced by the Exit Edit button while editing, so you have to
+   leave edit mode before the conversation can be closed. */
+#transcript-modal.editing #modal-close { display: none; }
+/* Turn-level checkbox + trash are always visible in edit mode; per-message ones
+   surface on hover, keeping the transcript clean while staying reachable. */
+#transcript-modal.editing .turn-controls { display: inline-flex; }
+#transcript-modal.editing .msg-controls {
+  display: inline-flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s var(--ease);
+}
+#transcript-modal.editing .msg:hover .msg-controls,
+#transcript-modal.editing .msg:focus-within .msg-controls { opacity: 1; pointer-events: auto; }
 
 .icon-btn {
   background: none; border: 0;
