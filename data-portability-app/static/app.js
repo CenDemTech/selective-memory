@@ -833,7 +833,7 @@ function renderMessage(message) {
     if (!seg.tier) return body;
     // data-msg lets a redaction name the message the run belongs to.
     return `<mark class="hl ${seg.tier.toLowerCase()}" data-msg="${escapeAttr(message.uuid || '')}"
-      title="${escapeAttr(seg.label)} — click to select, then Redact">${body}</mark>`;
+      title="Flagged: ${escapeAttr(seg.label)} — click to redact just this run (edit mode)">${body}</mark>`;
   }).join('');
 }
 
@@ -857,9 +857,12 @@ function groupIntoTurns(messages) {
 /* Per-message and per-turn controls (checkbox + trash) are always shown — the
    modal is the place editing happens, so there's no mode to arm first. */
 function controlsHtml(kind) {
+  const noun = kind === 'turn' ? 'turn' : 'message';
+  const checkTip = `Select this ${noun} — then use the delete button to remove several at once`;
+  const trashTip = `Delete this ${noun}`;
   return `<span class="edit-controls ${kind}-controls">
-      <input type="checkbox" class="${kind}-check" aria-label="Select for deletion">
-      <button class="msg-trash ${kind}-trash" title="Delete" aria-label="Delete">${TRASH_SVG}</button>
+      <input type="checkbox" class="${kind}-check" aria-label="Select ${noun} for deletion" title="${checkTip}">
+      <button class="msg-trash ${kind}-trash" title="${trashTip}" aria-label="${trashTip}">${TRASH_SVG}</button>
     </span>`;
 }
 
@@ -1000,15 +1003,18 @@ function positionFab(rect) {
    parked on. Either sets `pendingTextDelete` and shows the button over it. */
 function updateTextFab() {
   if ($('transcript-modal').hidden || !editing) return hideTextFab();
+  const body = $('modal-body');
   const sel = window.getSelection();
 
-  // 1) Highlight mode: a live drag-selection inside one bubble.
+  // 1) Highlight mode: a live drag-selection inside one bubble. The bubble must
+  // still be in the live transcript — a selection left over old, replaced DOM
+  // isn't a real target.
   if (highlightMode && sel && !sel.isCollapsed && sel.rangeCount) {
     const range = sel.getRangeAt(0);
     const bubble = bubbleOf(range.startContainer);
     const msg = bubble && bubble.closest('.msg');
     const selected = range.toString();
-    if (bubble && bubble === bubbleOf(range.endContainer) &&
+    if (bubble && body.contains(bubble) && bubble === bubbleOf(range.endContainer) &&
         msg && msg.dataset.msg && selected.trim()) {
       pendingTextDelete = {
         message_uuid: msg.dataset.msg,
@@ -1021,7 +1027,7 @@ function updateTextFab() {
   }
 
   // 2) A sensitivity highlight the finder is parked on — offer to redact it.
-  if (hlIndex >= 0 && highlights[hlIndex]) {
+  if (hlIndex >= 0 && highlights[hlIndex] && body.contains(highlights[hlIndex])) {
     const mark = highlights[hlIndex];
     const bubble = mark.closest('.bubble');
     const msg = mark.closest('.msg');
@@ -1066,6 +1072,7 @@ $('text-delete-fab').addEventListener('click', async () => {
     applyEditedRow(data);
     setUndoRedo(data);
     await loadTranscript();  // server hands the boxed run back as a segment
+    hideTextFab();           // final word, after any mid-reload selectionchange
   } catch (err) {
     alert(err.message);
   }
@@ -1115,6 +1122,12 @@ function updateEditStatus() {
 
 async function loadTranscript() {
   if (!openConv) return;
+  // Clear the fab and the parked highlight *before* the async fetch. Otherwise a
+  // `selectionchange` queued by the delete (removeAllRanges) can fire mid-reload
+  // while `hlIndex` still points at the old, not-yet-replaced mark, and reopen
+  // the Delete button over text that's about to disappear.
+  hlIndex = -1;
+  highlights = [];
   hideTextFab();  // the DOM is about to be replaced
 
   try {
@@ -1217,7 +1230,8 @@ $('hl-redact-all').addEventListener('click', async () => {
   } catch (err) {
     alert(err.message);
   } finally {
-    button.disabled = false;
+    // Stay disabled if there's nothing left to redact.
+    button.disabled = $('modal-body').querySelectorAll('mark.hl').length === 0;
   }
 });
 

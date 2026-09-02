@@ -898,7 +898,8 @@ body.is-advanced .review-btn:hover {
 }
 .highlight-mode input:checked + .switch { background: var(--blue); border-color: var(--blue); }
 .highlight-mode input:checked + .switch::after { transform: translateX(16px); background: var(--white); }
-.highlight-mode input:checked ~ .highlight-mode-label { color: var(--ink); }
+/* The label reads yellow — it arms the manual-highlight (yellow) selection. */
+.highlight-mode-label { color: var(--warn); }
 .highlight-mode input:focus-visible + .switch { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 /* With Highlight mode on, a text selection turns red — it's a delete target, not
@@ -925,17 +926,10 @@ body.is-advanced .review-btn:hover {
 /* The close ✕ is replaced by the Exit Edit button while editing, so you have to
    leave edit mode before the conversation can be closed. */
 #transcript-modal.editing #modal-close { display: none; }
-/* Turn-level checkbox + trash are always visible in edit mode; per-message ones
-   surface on hover, keeping the transcript clean while staying reachable. */
-#transcript-modal.editing .turn-controls { display: inline-flex; }
-#transcript-modal.editing .msg-controls {
-  display: inline-flex;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .12s var(--ease);
-}
-#transcript-modal.editing .msg:hover .msg-controls,
-#transcript-modal.editing .msg:focus-within .msg-controls { opacity: 1; pointer-events: auto; }
+/* Both turn-level and per-message checkbox + trash are always visible in edit
+   mode — static, not hover-revealed. */
+#transcript-modal.editing .turn-controls,
+#transcript-modal.editing .msg-controls { display: inline-flex; }
 
 .icon-btn {
   background: none; border: 0;

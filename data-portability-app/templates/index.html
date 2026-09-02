@@ -263,13 +263,14 @@
       <div class="head-actions">
         <div class="hl-tools" id="hl-nav" hidden>
           <label class="hl-select-wrap">
-            <select class="hl-select" id="hl-select" aria-label="Jump to highlight"></select>
+            <select class="hl-select" id="hl-select" aria-label="Jump to highlight"
+                    title="Jump to a flagged run — then click it to redact just that one"></select>
           </label>
           <button class="redact-btn amber" id="hl-redact-all"
-                  title="Redact everything highlighted in this conversation">Redact all highlighted</button>
+                  title="Redact every highlighted run in this conversation at once">Redact all highlights</button>
         </div>
         <label class="highlight-mode" id="highlight-mode-wrap"
-               title="Drag-select any text to highlight it for redaction">
+               title="Turn on to drag-select any text and delete it, even text the scanner didn't flag">
           <input type="checkbox" id="highlight-mode">
           <span class="switch" aria-hidden="true"></span>
           <span class="highlight-mode-label">Highlight mode</span>
@@ -288,16 +289,18 @@
       </div>
     </header>
     <div class="modal-body" id="modal-body"></div>
-    <button class="text-delete-fab" id="text-delete-fab" hidden>✕ Delete</button>
+    <button class="text-delete-fab" id="text-delete-fab" title="Delete the selected text from this conversation" hidden>✕ Delete</button>
     <footer class="modal-foot">
       <div class="foot-left">
-        <button class="icon-btn" id="undo-btn" title="Undo (Cmd/Ctrl+Z)" disabled>&#x21A9;&#xFE0E;</button>
+        <button class="icon-btn" id="undo-btn" title="Undo the last edit (Cmd/Ctrl+Z)" disabled>&#x21A9;&#xFE0E;</button>
         <button class="icon-btn" id="redo-btn" title="Redo (Cmd/Ctrl+Shift+Z)" disabled>&#x21AA;&#xFE0E;</button>
         <span class="foot-status" id="edit-status"></span>
       </div>
       <div class="foot-right">
-        <button class="btn danger-outline" id="modal-delete" data-mode="conversation">Delete Entire Conversation</button>
-        <button class="btn primary" id="save-changes">Save Changes</button>
+        <button class="btn danger-outline" id="modal-delete" data-mode="conversation"
+                title="Remove this whole conversation from the export">Delete Entire Conversation</button>
+        <button class="btn primary" id="save-changes"
+                title="Keep these edits and return to the read-only view">Save Changes</button>
       </div>
     </footer>
   </div>
