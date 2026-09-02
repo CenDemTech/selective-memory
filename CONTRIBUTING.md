@@ -133,19 +133,6 @@ We aim for reasonable test coverage. Run:
 python -m pytest --cov=data-portability-app
 ```
 
-## Documentation
-
-- Update `README.md` for user-facing changes
-- Update `PRIVACY.md` if privacy implications change
-- Add docstrings to new functions and classes
-- Comment complex algorithms
-
-## Questions?
-
-- **GitHub Issues**: For bugs and features
-- **Discussions**: For general questions and ideas
-- **Email**: See repository owner contact info
-
 ## Code of Conduct
 
 Please be respectful and constructive in all interactions. We're all here to build something useful together.
