@@ -110,7 +110,7 @@ def test_redaction_clears_the_tag_and_reaches_the_download():
     assert set(out[0]) == set(ORIGINAL[1])
 
 
-def test_delete_text_removes_only_the_selection():
+def test_delete_text_boxes_only_the_selection():
     c = client()
     _, data = upload(c)
     token = data["token"]
@@ -124,8 +124,18 @@ def test_delete_text_removes_only_the_selection():
     })
     assert r.status_code == 200
     after = messages(c, token, row["index"])[0]
-    assert "near me" not in after["text"]
-    assert "sushi place" in after["text"]      # the rest is untouched
+    # The selection is boxed (a redacted segment), the rest untouched…
+    redacted = [s["text"] for s in after["segments"] if s.get("redacted")]
+    assert "near me" in redacted
+    assert "sushi place" in after["text"]
+    # …and stripped from that message in the export (the assistant's separate
+    # "sushi near me" is untouched, so scope the check to the user's node).
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [cid]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    user_node = out[0]["mapping"][user_msg["uuid"]]
+    node_text = json.dumps(user_node["message"]["content"])
+    assert "near me" not in node_text
+    assert "sushi place" in node_text
 
 
 def test_delete_message_shrinks_the_conversation_and_survives_download():

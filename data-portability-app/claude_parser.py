@@ -11,6 +11,7 @@ import json
 
 import pandas as pd
 
+import redaction
 import sensitivity
 
 
@@ -136,7 +137,9 @@ def build_record(index, conversation, messages):
     # `explode` leaves an all-NaN row behind for a conversation with no messages.
     real = [m for m in messages
             if _clean(m.get("uuid")) is not None or _message_text(m)]
-    texts = [_message_text(m) for m in real]
+    # Redacted runs are removed from the export, so they don't count toward the
+    # tag or the word count: strip them before either is computed.
+    texts = [redaction.strip(_message_text(m)) for m in real]
     duration, duration_seconds = _duration([_clean(m.get("created_at")) for m in real])
 
     # Sensitivity covers the whole conversation — the user's disclosures and the
@@ -186,13 +189,17 @@ def build_transcript(file_path, conversation_index):
                 "uuid": _clean(record.get("uuid")),
                 "sender": _clean(record.get("sender")) or "unknown",
                 "created_at": _clean(record.get("created_at")),
-                "text": text,
+                # ``text`` here is the display text (redaction markers removed
+                # but their content kept), so the concatenation of ``segments``
+                # equals it. The redacted runs still reach the export stripped —
+                # that happens in ``export_conversation`` at build time.
+                "text": redaction.unwrap(text),
                 # Every message is scanned for display, the model's replies
                 # included. Note this is deliberately wider than the tag, which
                 # ``build_metadata`` decides from the user's messages alone.
                 # Pre-sliced runs so the client can highlight what was flagged
-                # without doing any offset arithmetic of its own.
-                "segments": sensitivity.segment(text),
+                # and box what was redacted, without any offset arithmetic.
+                "segments": redaction.display_segments(text, sensitivity.segment),
             }
         )
 
@@ -203,6 +210,26 @@ def load_raw(file_path):
     """The untouched parsed JSON, used to rebuild an identically shaped export."""
     with open(file_path, "r") as f:
         return json.load(f)
+
+
+def export_conversation(conversation):
+    """A deep copy of one conversation with redactions stripped for export.
+
+    Redacted runs live in the working copy wrapped in markers so they can be
+    shown back as boxes; here the markers *and their content* are removed, so
+    the downloaded file carries nothing that was redacted. Every other field is
+    untouched, keeping the export structurally identical to the upload.
+    """
+    result = copy.deepcopy(conversation)
+    for message in result.get("chat_messages") or []:
+        if not isinstance(message, dict):
+            continue
+        if isinstance(message.get("text"), str):
+            message["text"] = redaction.strip(message["text"])
+        for block in message.get("content") or []:
+            if isinstance(block, dict) and isinstance(block.get("text"), str):
+                block["text"] = redaction.strip(block["text"])
+    return result
 
 
 class EditError(Exception):
@@ -237,13 +264,14 @@ def _row_index(raw, conversation):
 # --------------------------------------------------------------------------
 
 def redact_in_message(messages, message_uuid, target):
-    """Return a copy of ``messages`` with ``target`` scrubbed from one message.
+    """Return a copy of ``messages`` with ``target`` redacted in one message.
 
-    Every copy of ``target`` inside that message goes, across both ``text`` and
-    the ``content`` blocks — the two duplicate each other in Claude exports, so
-    removing it from only one would leave the secret in the download. Only text
-    the classifier currently flags may be removed; this is a redaction tool, not
-    a general find-and-delete.
+    Every copy of ``target`` inside that message is wrapped in redaction markers,
+    across both ``text`` and the ``content`` blocks — the two duplicate each
+    other in Claude exports, so leaving it in either would keep the secret in the
+    download. The run stays visible as a greyed box, and is stripped from the
+    export at build time. Only text the classifier currently flags may be
+    redacted; this is a redaction tool, not a general find-and-delete.
     """
     if not target:
         raise EditError("Nothing to redact.")
@@ -253,16 +281,19 @@ def redact_in_message(messages, message_uuid, target):
     if message is None:
         raise EditError("That message is no longer in the conversation.")
 
-    flagged = {seg["text"] for seg in sensitivity.segment(_message_text(message))
+    # Flagged runs are computed over the *visible* text only, so an already
+    # redacted run can't be flagged (or redacted) a second time.
+    flagged = {seg["text"]
+               for seg in redaction.display_segments(_message_text(message), sensitivity.segment)
                if seg.get("tier")}
     if target not in flagged:
         raise EditError("That text isn't currently flagged in this message.")
 
     if isinstance(message.get("text"), str):
-        message["text"] = message["text"].replace(target, "")
+        message["text"] = redaction.wrap_target(message["text"], target)
     for block in message.get("content") or []:
         if isinstance(block, dict) and isinstance(block.get("text"), str):
-            block["text"] = block["text"].replace(target, "")
+            block["text"] = redaction.wrap_target(block["text"], target)
 
     return result
 
@@ -297,8 +328,9 @@ def _sync_content(message, new_text, removed):
     """Keep a message's content blocks consistent with its edited text.
 
     The common Claude shape is a single text block mirroring ``text`` — that one
-    is set exactly. With several blocks we strip ``removed`` from each instead,
-    which is leak-safe even if it clears more than the single selected copy.
+    is set exactly. With several blocks we wrap every copy of ``removed`` in each
+    instead, which is leak-safe even if it redacts more than the single selected
+    copy.
     """
     text_blocks = [b for b in (message.get("content") or [])
                    if isinstance(b, dict) and isinstance(b.get("text"), str)]
@@ -306,7 +338,7 @@ def _sync_content(message, new_text, removed):
         text_blocks[0]["text"] = new_text
     else:
         for block in text_blocks:
-            block["text"] = block["text"].replace(removed, "")
+            block["text"] = redaction.wrap_target(block["text"], removed)
 
 
 def delete_text_in_message(messages, message_uuid, selected, occurrence=0):
@@ -330,10 +362,9 @@ def delete_text_in_message(messages, message_uuid, selected, occurrence=0):
         raise EditError("That message is no longer in the conversation.")
 
     plain = _message_text(message)
-    idx = _nth_index(plain, selected, occurrence)
-    if idx < 0:
+    new_plain, wrapped = redaction.wrap_occurrence(plain, selected, occurrence)
+    if not wrapped:
         raise EditError("That selection no longer matches the message text.")
-    new_plain = plain[:idx] + plain[idx + len(selected):]
 
     # `text` is what _message_text returns when it's a non-empty string; leave an
     # empty text field empty so the content fallback keeps driving the display.

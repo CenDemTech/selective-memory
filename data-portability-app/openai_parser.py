@@ -20,6 +20,7 @@ import copy
 import json
 from datetime import datetime, timezone
 
+import redaction
 import sensitivity
 
 
@@ -37,6 +38,29 @@ class EditError(Exception):
 def load_raw(file_path):
     with open(file_path, "r") as f:
         return json.load(f)
+
+
+def export_conversation(conversation):
+    """A deep copy of one conversation with redactions stripped for export.
+
+    Redacted runs live wrapped in markers so they can be shown back as boxes;
+    here the markers and their content are removed from every message node's
+    text, so the downloaded file carries nothing that was redacted. The graph
+    shape is otherwise untouched.
+    """
+    result = copy.deepcopy(conversation)
+    for node in (result.get("mapping") or {}).values():
+        message = node.get("message") if isinstance(node, dict) else None
+        if not message:
+            continue
+        content = message.get("content") or {}
+        parts = content.get("parts")
+        if isinstance(parts, list):
+            content["parts"] = [redaction.strip(p) if isinstance(p, str) else p
+                                for p in parts]
+        if isinstance(content.get("text"), str):
+            content["text"] = redaction.strip(content["text"])
+    return result
 
 
 def list_conversations(raw):
@@ -166,7 +190,9 @@ def _duration(iso_times):
 
 def _row(index, conversation, messages):
     """One table row. Sensitivity covers the whole conversation, both sides."""
-    texts = [m["text"] for m in messages]
+    # Redacted runs are stripped from the export, so they don't count toward the
+    # tag or the word count.
+    texts = [redaction.strip(m["text"]) for m in messages]
     tag = sensitivity.classify("\n".join(texts))
     duration, duration_seconds = _duration([m["created_at"] for m in messages])
     return {
@@ -202,8 +228,13 @@ def build_transcript(file_path, conversation_index):
     if not 0 <= conversation_index < len(conversations):
         return {"name": "", "messages": []}
     conversation = conversations[conversation_index]
+    # ``text`` becomes the display text (markers removed, content kept) so it
+    # equals the concatenation of ``segments``; redacted runs are boxed and the
+    # still-flagged ones highlighted. The export strip happens at build time.
     messages = [
-        {**m, "segments": sensitivity.segment(m["text"])}
+        {**m,
+         "text": redaction.unwrap(m["text"]),
+         "segments": redaction.display_segments(m["text"], sensitivity.segment)}
         for m in _transcript(conversation)
     ]
     return {"name": conversation.get("title") or "(untitled)", "messages": messages}
@@ -289,11 +320,13 @@ def redact_in_message(blob, node_id, target):
     message = _node_message(blob, node_id)
 
     plain = _node_text(message)
-    flagged = {seg["text"] for seg in sensitivity.segment(plain) if seg.get("tier")}
+    flagged = {seg["text"]
+               for seg in redaction.display_segments(plain, sensitivity.segment)
+               if seg.get("tier")}
     if target not in flagged:
         raise EditError("That text isn't currently flagged in this message.")
 
-    _set_node_text(message, plain.replace(target, ""))
+    _set_node_text(message, redaction.wrap_target(plain, target))
     return blob
 
 
@@ -310,11 +343,11 @@ def delete_text_in_message(blob, node_id, selected, occurrence=0):
     message = _node_message(blob, node_id)
 
     plain = _node_text(message)
-    idx = _nth_index(plain, selected, occurrence)
-    if idx < 0:
+    new_plain, wrapped = redaction.wrap_occurrence(plain, selected, occurrence)
+    if not wrapped:
         raise EditError("That selection no longer matches the message text.")
 
-    _set_node_text(message, plain[:idx] + plain[idx + len(selected):])
+    _set_node_text(message, new_plain)
     return blob
 
 

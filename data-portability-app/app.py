@@ -316,6 +316,51 @@ def _history_request():
     return session, conversation_uuid, None
 
 
+@app.route("/api/delete_conversations", methods=["POST"])
+def delete_conversations():
+    """Drop whole conversations from the working copy.
+
+    Unlike the message-level edits above this is not undoable, so the client
+    confirms first. Removing entries renumbers everything after them — the row
+    indices the client holds are positions in the listed set — so the fresh
+    metadata is returned for the caller to re-render from rather than trying to
+    patch the old rows.
+    """
+    payload = request.get_json(silent=True) or {}
+    session, error = _require_session(payload.get("token"))
+    if error:
+        return error
+
+    selected = set(payload.get("uuids") or [])
+    if not selected:
+        return jsonify({"error": "No conversations selected to delete."}), 400
+
+    parser = _parser(session)
+    id_field = parser.ID_FIELD
+    raw = parser.load_raw(session["source"])
+    kept = [c for c in raw if c.get(id_field) not in selected]
+
+    removed = len(raw) - len(kept)
+    if not removed:
+        return jsonify({"error": "Those conversations are no longer in the file."}), 400
+
+    # Whole-list rewrite, so it stays parser-agnostic: only ID_FIELD differs.
+    with open(session["source"], "w") as f:
+        json.dump(kept, f, ensure_ascii=False)
+
+    for conversation_uuid in selected:
+        session["history"].pop(conversation_uuid, None)
+    session["result"] = None  # any file built before this delete is now stale
+
+    return jsonify(
+        {
+            "removed": removed,
+            "total_in_file": len(kept),
+            "conversations": parser.build_metadata(session["source"]) if kept else [],
+        }
+    )
+
+
 @app.route("/api/build", methods=["POST"])
 def build():
     payload = request.get_json(silent=True) or {}
@@ -339,9 +384,14 @@ def build():
     else:
         filtered = [c for c in raw if c.get(id_field) not in selected]
 
+    # Strip redaction markers (and their content) so nothing redacted reaches the
+    # download. Parsers that don't do redaction fall back to an identity copy.
+    sanitize = getattr(parser, "export_conversation", lambda c: c)
+    cleaned = [sanitize(c) for c in filtered]
+
     result_path = os.path.join(os.path.dirname(session["source"]), "filtered_conversations.json")
     with open(result_path, "w") as f:
-        json.dump(filtered, f, indent=2, ensure_ascii=False)
+        json.dump(cleaned, f, indent=2, ensure_ascii=False)
 
     session["result"] = result_path
     session["result_name"] = (

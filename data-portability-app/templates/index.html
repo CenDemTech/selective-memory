@@ -10,123 +10,84 @@
 
 <header class="topbar">
   <div class="brand">
-    <span class="brand-mark"></span>
-    <span>Conversation Filter</span>
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11L9.4 8.6v4.2l-2.8 1.4V8.6L2.5 3.5Z" fill="currentColor"/></svg>
+    </span>
+    <span class="brand-name">Conversation Filter</span>
   </div>
-  <ol class="steps" id="steps">
-    <li data-step="1" class="active"><span class="dot">1</span> Platform</li>
-    <li data-step="2"><span class="dot">2</span> Upload</li>
-    <li data-step="3"><span class="dot">3</span> Action</li>
-    <li data-step="4"><span class="dot">4</span> Select</li>
-  </ol>
 </header>
 
 <main class="stage">
 
-  <!-- ── Page 1 · choose platform ─────────────────────────────────── -->
+  <!-- ── Step 1 · choose platform ─────────────────────────────────── -->
   <section class="page is-active" id="page-1">
-    <div class="page-inner narrow">
+    <div class="page-inner">
       <h1>Where are your conversations from?</h1>
       <p class="lede">Pick the platform that produced your <code>conversations.json</code> file.</p>
 
+      <ol class="stepchips"></ol>
+
       <div class="platform-grid">
         <button class="platform" data-platform="claude">
-          <span class="platform-logo claude">✦</span>
-          <span class="platform-name">Claude</span>
-          <span class="platform-note">Anthropic export</span>
+          <span class="platform-logo claude" aria-hidden="true">✦</span>
+          <span class="platform-name">Anthropic</span>
+          <span class="platform-note">Claude export (.json)</span>
         </button>
 
         <button class="platform" data-platform="openai">
-          <span class="platform-logo openai">◍</span>
-          <span class="platform-name">ChatGPT</span>
-          <span class="platform-note">OpenAI export</span>
-        </button>
-
-        <button class="platform" disabled>
-          <span class="platform-logo gemini">◆</span>
-          <span class="platform-name">Gemini</span>
-          <span class="platform-note">Coming soon</span>
+          <span class="platform-logo openai" aria-hidden="true">◍</span>
+          <span class="platform-name">Open AI</span>
+          <span class="platform-note">ChatGPT export (.json)</span>
         </button>
       </div>
 
-      <p class="footnote"><strong><u>Your file never leaves this machine;</u></strong> it is parsed by the local app and deleted when you start over.</p>
+      <p class="privacy">
+        <span class="privacy-check" aria-hidden="true">✓</span>
+        <span><strong>Your file never leaves this machine.</strong> It is parsed entirely by the
+        local app and deleted immediately when you close the session.</span>
+      </p>
     </div>
   </section>
 
-  <!-- ── Page 2 · upload ──────────────────────────────────────────── -->
+  <!-- ── Step 2 · edit ────────────────────────────────────────────── -->
   <section class="page" id="page-2">
-    <div class="page-inner narrow">
-      <button class="back" data-goto="1">← Back</button>
-      <h1>Upload your <code>conversations.json</code></h1>
-      <p class="lede" id="upload-lede">From your data export. Drop it below or browse for it.</p>
+    <div class="page-inner">
+      <button class="back" id="back-to-upload">← Upload a different file</button>
+      <h1>Edit your conversations</h1>
+      <p class="lede" id="edit-lede">Redact sensitive information, delete specific turns or the whole conversation from your <code>conversations.json</code>.</p>
 
-      <label class="dropzone" id="dropzone">
-        <input type="file" id="file-input" accept=".json,application/json" hidden>
-        <span class="dropzone-icon">⇪</span>
-        <span class="dropzone-title">Drop your file here</span>
-        <span class="dropzone-sub">or <u>browse</u> — .json only</span>
-      </label>
+      <ol class="stepchips"></ol>
 
-      <div class="upload-status" id="upload-status" hidden>
-        <div class="spinner"></div>
-        <span id="upload-status-text">Reading your file…</span>
-      </div>
-
-      <p class="error" id="upload-error" hidden></p>
-    </div>
-  </section>
-
-  <!-- ── Page 3 · export or remove ────────────────────────────────── -->
-  <section class="page" id="page-3">
-    <div class="page-inner narrow">
-      <button class="back" data-goto="2">← Upload a different file</button>
-      <h1>What do you want to do?</h1>
-      <p class="lede">Choose whether to keep or drop the conversations you pick next. Your uploaded file is never changed.</p>
-
-      <div class="choice-grid">
-        <button class="choice" data-mode="export">
-          <span class="choice-icon keep">↧</span>
-          <span class="choice-title">Export conversations</span>
-          <span class="choice-note">Build a new file with only the conversations you select.</span>
-        </button>
-
-        <button class="choice" data-mode="remove">
-          <span class="choice-icon drop">✕</span>
-          <span class="choice-title">Remove conversations</span>
-          <span class="choice-note">Build a copy of your file with the conversations you select taken out.</span>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Page 4 · select conversations ────────────────────────────── -->
-  <section class="page" id="page-4">
-    <div class="page-inner wide">
-      <button class="back" data-goto="3">← Back</button>
-
-      <div class="table-head">
-        <div>
-          <h1 id="select-heading">Select conversations</h1>
-          <p class="lede" id="table-summary"></p>
+      <div class="toolbar">
+        <div class="tier-filter" data-tier-filter role="group" aria-label="Filter by sensitivity">
+          <span class="tier-filter-label">Sensitivity Filter:</span>
+          <button type="button" class="tier-pill all" data-tier="" aria-pressed="true">All</button>
+          <button type="button" class="tier-pill green" data-tier="Green" aria-pressed="false"><span class="tier-dot"></span>Green</button>
+          <button type="button" class="tier-pill yellow" data-tier="Yellow" aria-pressed="false"><span class="tier-dot"></span>Yellow</button>
+          <button type="button" class="tier-pill red" data-tier="Red" aria-pressed="false"><span class="tier-dot"></span>Red</button>
         </div>
-        <div class="search-wrap">
-          <label class="adv-toggle" id="adv-toggle" title="Turn on per-message deletion inside a conversation">
-            <input type="checkbox" id="adv-check">
-            <span>Advanced settings</span>
-          </label>
+
+      </div>
+
+      <div class="toolbar">
+        <div class="search-field">
+          <span class="search-icon" aria-hidden="true">⌕</span>
           <input type="search" id="search" placeholder="Search by name…" autocomplete="off">
         </div>
-      </div>
 
-      <div class="tier-filter" id="tier-filter" role="group" aria-label="Filter by sensitivity">
-        <span class="tier-filter-label">Sensitivity Filter</span>
-        <button type="button" class="tier-pill green" data-tier="Green" aria-pressed="false"><span class="tier-dot"></span>Green</button>
-        <button type="button" class="tier-pill yellow" data-tier="Yellow" aria-pressed="false"><span class="tier-dot"></span>Yellow</button>
-        <button type="button" class="tier-pill red" data-tier="Red" aria-pressed="false"><span class="tier-dot"></span>Red</button>
+        <div class="toolbar-right">
+          <button class="btn delete-btn" id="btn-delete-selected" disabled
+                  title="Delete the selected conversations from your working copy">
+            <span class="trash-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2.8 4.3h10.4M6.5 4.3V3.1a.8.8 0 0 1 .8-.8h1.4a.8.8 0 0 1 .8.8v1.2M4.2 4.3l.6 8.3a.9.9 0 0 0 .9.8h4.6a.9.9 0 0 0 .9-.8l.6-8.3M6.7 6.8v4M9.3 6.8v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Delete
+          </button>
+        </div>
       </div>
 
       <div class="table-scroll">
-        <table id="conversations">
+        <table class="conv-table">
           <thead>
             <tr>
               <th class="col-check"><input type="checkbox" id="check-all" aria-label="Select all"></th>
@@ -136,18 +97,130 @@
               <th class="sortable num" data-sort="message_count">Messages</th>
               <th class="sortable num" data-sort="word_count">Words</th>
               <th class="sortable num" data-sort="duration_seconds">Duration</th>
-              <th class="sortable wrap" data-sort="sensitivity_rank"
-                  title="Scans the whole conversation — your messages and the assistant's replies. Green: nothing flagged. Yellow: quasi-identifying or commercially sensitive. Red: regulated data, PII, secrets, exploits, or legal exposure. Hover a tag to see what matched.">Conversation sensitivity</th>
-              <th>Conversation text</th>
+              <th class="sortable" data-sort="sensitivity_rank"
+                  title="Scans the whole conversation — your messages and the assistant's replies. Green: nothing flagged. Yellow: quasi-identifying or commercially sensitive. Red: regulated data, PII, secrets, exploits, or legal exposure. Hover a tag to see what matched.">Sensitivity</th>
+              <th class="col-action">Action</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
         <p class="empty" id="empty-state" hidden>No conversations match the current filters.</p>
       </div>
+
+      <div class="table-foot">
+        <div class="foot-counts">
+          <span class="showing" id="table-summary"></span>
+          <span class="select-hint">Shift-click or drag down the rows to select a range</span>
+        </div>
+        <button class="btn primary" id="btn-to-export" disabled>
+          Review .json file to be exported <span class="btn-glyph" aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <p class="privacy">
+        <span class="privacy-check" aria-hidden="true">✓</span>
+        <span><strong>Your file never leaves this machine.</strong> It is parsed entirely by the
+        local app and deleted immediately when you close the session.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Step 3 · export ──────────────────────────────────────────── -->
+  <section class="page" id="page-3">
+    <div class="page-inner">
+      <button class="back" data-goto="2">← Back</button>
+      <h1>Review your conversations to export</h1>
+      <p class="lede export-lede">Review the conversations and their final sensitivity labels before exporting.</p>
+
+      <ol class="stepchips"></ol>
+
+      <div class="toolbar">
+        <div class="tier-filter" data-tier-filter role="group" aria-label="Filter by sensitivity">
+          <span class="tier-filter-label">Sensitivity Filter:</span>
+          <button type="button" class="tier-pill all" data-tier="" aria-pressed="true">All</button>
+          <button type="button" class="tier-pill green" data-tier="Green" aria-pressed="false"><span class="tier-dot"></span>Green</button>
+          <button type="button" class="tier-pill yellow" data-tier="Yellow" aria-pressed="false"><span class="tier-dot"></span>Yellow</button>
+          <button type="button" class="tier-pill red" data-tier="Red" aria-pressed="false"><span class="tier-dot"></span>Red</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="conv-table export-table">
+          <thead>
+            <tr>
+              <th>Conversation name</th>
+              <th>Started</th>
+              <th>Last updated</th>
+              <th class="num">Messages</th>
+              <th class="num">Words</th>
+              <th class="num">Duration</th>
+              <th>Sensitivity</th>
+              <th class="num">Redactions</th>
+              <th class="num">Msgs deleted</th>
+            </tr>
+          </thead>
+          <tbody id="export-tbody"></tbody>
+        </table>
+        <p class="empty" id="export-empty" hidden>Nothing is selected for export.</p>
+      </div>
+
+      <div class="table-foot">
+        <div class="foot-counts">
+          <span class="showing" id="export-summary"></span>
+        </div>
+        <button class="btn primary" id="btn-build">
+          Export (.json) conversation file <span class="btn-glyph" aria-hidden="true">⭳</span>
+        </button>
+      </div>
+
+      <p class="privacy">
+        <span class="privacy-check" aria-hidden="true">✓</span>
+        <span><strong>Your file never leaves this machine.</strong> It is parsed entirely by the
+        local app and deleted immediately when you close the session.</span>
+      </p>
     </div>
   </section>
 </main>
+
+<!-- ── Upload modal (opens once a platform is picked) ──────────────── -->
+<div class="overlay" id="upload-modal" hidden>
+  <div class="modal upload" role="dialog" aria-modal="true" aria-labelledby="ul-title">
+    <header class="modal-head">
+      <div class="modal-headings">
+        <h2 id="ul-title">Upload your conversation dataset</h2>
+        <p class="modal-sub" id="upload-lede">Drop your <code>conversations.json</code> below or browse for it.</p>
+      </div>
+      <button class="icon-btn" id="upload-close" aria-label="Close">✕</button>
+    </header>
+
+    <div class="modal-body">
+      <div class="upload-platform">
+        <span class="platform-card-name" id="upload-platform-name">Anthropic</span>
+        <span class="platform-card-note" id="upload-platform-note">Claude export &middot; json</span>
+      </div>
+
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".json,application/json" hidden>
+        <span class="dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M10 13.5V5m0 0L6.5 8.5M10 5l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 13v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </span>
+        <span class="dropzone-title">Drop your file here</span>
+        <span class="dropzone-sub">or <span class="link">browse files</span> — json only (max 512MB)</span>
+      </label>
+
+      <div class="upload-status" id="upload-status" hidden>
+        <div class="spinner"></div>
+        <span id="upload-status-text">Reading your file…</span>
+      </div>
+
+      <p class="error" id="upload-error" hidden></p>
+    </div>
+
+    <footer class="modal-foot">
+      <button class="btn ghost" id="change-platform">← Choose a different platform</button>
+    </footer>
+  </div>
+</div>
 
 <!-- ── Download modal (after a build) ──────────────────────────────── -->
 <div class="overlay" id="download-modal" hidden>
@@ -161,7 +234,7 @@
     </header>
     <div class="modal-body">
       <div class="file-card">
-        <span class="file-icon">{ }</span>
+        <span class="file-icon" aria-hidden="true">{ }</span>
         <div>
           <div class="file-name" id="result-filename"></div>
           <div class="file-meta" id="result-meta"></div>
@@ -170,37 +243,28 @@
       <p class="hint">Same JSON structure as the file you uploaded — just a different set of conversations.</p>
     </div>
     <footer class="modal-foot dl-foot">
-      <a class="btn" id="download-link" download>Download .json</a>
+      <a class="btn primary" id="download-link" download>Download .json</a>
     </footer>
   </div>
 </div>
 
-<!-- ── Action bar (appears once rows are selected) ─────────────────── -->
-<div class="actionbar" id="actionbar" hidden>
-  <span class="selected-count" id="selected-count"></span>
-  <div class="actionbar-buttons">
-    <button class="btn ghost" id="clear-selection">Clear</button>
-    <button class="btn" id="btn-build">Export (0)</button>
-  </div>
-</div>
-
-<!-- ── Transcript modal ────────────────────────────────────────────── -->
+<!-- ── Review modal ────────────────────────────────────────────────── -->
 <div class="overlay" id="transcript-modal" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <header class="modal-head">
-      <div>
+      <div class="modal-headings">
         <h2 id="modal-title"></h2>
         <p class="modal-sub" id="modal-sub"></p>
       </div>
       <div class="head-actions">
-        <div class="hl-nav" id="hl-nav" hidden>
-          <span class="hl-count" id="hl-count" aria-live="polite"></span>
-          <button class="icon-btn" id="hl-prev" aria-label="Previous highlight"
-                  title="Previous highlight (Shift+Enter)">↑</button>
-          <button class="icon-btn" id="hl-next" aria-label="Next highlight"
-                  title="Next highlight (Enter)">↓</button>
-          <button class="redact-btn" id="hl-redact" disabled
+        <div class="hl-tools" id="hl-nav" hidden>
+          <label class="hl-select-wrap">
+            <select class="hl-select" id="hl-select" aria-label="Jump to highlight"></select>
+          </label>
+          <button class="redact-btn amber" id="hl-redact" disabled
                   title="Select a highlight first">Redact</button>
+          <button class="redact-btn blue" id="hl-redact-all"
+                  title="Redact every flagged run in this conversation">Highlight &amp; Redact</button>
         </div>
         <button class="icon-btn" id="modal-close" aria-label="Close">✕</button>
       </div>
@@ -211,10 +275,11 @@
       <div class="foot-left">
         <button class="icon-btn" id="undo-btn" title="Undo (Cmd/Ctrl+Z)" disabled>&#x21A9;&#xFE0E;</button>
         <button class="icon-btn" id="redo-btn" title="Redo (Cmd/Ctrl+Shift+Z)" disabled>&#x21AA;&#xFE0E;</button>
+        <span class="foot-status" id="edit-status"></span>
       </div>
       <div class="foot-right">
-        <button class="btn danger" id="delete-selected" hidden disabled>Delete selected</button>
-        <button class="btn ghost" id="modal-close-2">Close</button>
+        <button class="btn danger-outline" id="modal-delete" data-mode="conversation">Delete Conversation</button>
+        <button class="btn primary" id="save-changes">Save Changes</button>
       </div>
     </footer>
   </div>

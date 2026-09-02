@@ -174,7 +174,7 @@ def _deploy_row(c, data):
                 if r["name"] == "Deploy script keeps failing on staging")
 
 
-def test_redaction_deletes_the_flagged_text_everywhere_in_that_message():
+def test_redaction_boxes_the_flagged_text_everywhere_in_that_message():
     c = client()
     _, data = upload(c)
     token = data["token"]
@@ -195,12 +195,20 @@ def test_redaction_deletes_the_flagged_text_everywhere_in_that_message():
     assert res.get_json()["redactions"] == 1
 
     after = c.get(f"/api/transcript?token={token}&index={row['index']}").get_json()
-    assert secret not in after["messages"][0]["text"]
+    segments = after["messages"][0]["segments"]
+    # The run stays visible so the user can see what they redacted, but now as a
+    # `redacted` segment (a greyed box), not plain or flagged text.
+    redacted = [s["text"] for s in segments if s.get("redacted")]
+    assert secret in redacted
     # The rest of the message survives untouched.
     assert "The deploy dies when it hits the staging box" in after["messages"][0]["text"]
-    # And it's gone from the flagged runs, so it can't be redacted twice.
-    flagged = [s["text"] for s in after["messages"][0]["segments"] if s.get("tier")]
+    # And it's no longer a flagged run, so it can't be redacted twice.
+    flagged = [s["text"] for s in segments if s.get("tier")]
     assert secret not in flagged
+    # It's stripped from the export even though it still shows in the transcript.
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [row["uuid"]]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    assert secret not in json.dumps(out)
 
 
 def test_redaction_reaches_the_content_blocks_too():
@@ -337,7 +345,7 @@ def test_redaction_invalidates_a_previously_built_file():
     assert c.get(f"/api/download?token={token}").status_code == 400
 
 
-def test_delete_text_removes_an_arbitrary_selection():
+def test_delete_text_boxes_an_arbitrary_selection():
     c = client()
     _, data = upload(c)
     token = data["token"]
@@ -355,9 +363,15 @@ def test_delete_text_removes_an_arbitrary_selection():
     assert res.get_json()["redactions"] == 1
 
     after = c.get(f"/api/transcript?token={token}&index={row['index']}").get_json()
-    assert "staging box" not in after["messages"][0]["text"]
-    # Everything around the selection is untouched.
+    # The selection becomes a redacted box, visible in the transcript…
+    redacted = [s["text"] for s in after["messages"][0]["segments"] if s.get("redacted")]
+    assert "staging box" in redacted
+    # …with everything around it untouched…
     assert "The deploy dies when it hits the" in after["messages"][0]["text"]
+    # …and stripped from the export.
+    c.post("/api/build", json={"token": token, "mode": "export", "uuids": [row["uuid"]]})
+    out = json.loads(c.get(f"/api/download?token={token}").data)
+    assert "staging box" not in json.dumps(out)
 
 
 def test_delete_text_removes_only_the_selected_occurrence():
@@ -377,8 +391,13 @@ def test_delete_text_removes_only_the_selected_occurrence():
     })
     assert res.status_code == 200
     after = c.get(f"/api/transcript?token={token}&index={row['index']}").get_json()
-    # One fewer "starter" than before — not all of them removed.
-    assert after["messages"][1]["text"].count("starter") == claude["text"].count("starter") - 1
+    segments = after["messages"][1]["segments"]
+    # Exactly one "starter" was boxed — not all of them.
+    redacted = [s for s in segments if s.get("redacted") and s["text"] == "starter"]
+    assert len(redacted) == 1
+    # The others are still visible, unredacted.
+    visible = "".join(s["text"] for s in segments if not s.get("redacted"))
+    assert visible.count("starter") == claude["text"].count("starter") - 1
 
 
 def test_delete_text_reaches_the_download_and_content_blocks():
@@ -589,12 +608,18 @@ def test_undo_reverts_a_redaction():
         "message_uuid": msg["uuid"], "text": "AKIAIOSFODNN7EXAMPLE",
     })
     gone = c.get(f"/api/transcript?token={token}&index={row['index']}").get_json()
-    assert "AKIAIOSFODNN7EXAMPLE" not in gone["messages"][0]["text"]
+    # Redacted: shown as a box, no longer a flagged run.
+    gone_segs = gone["messages"][0]["segments"]
+    assert "AKIAIOSFODNN7EXAMPLE" in [s["text"] for s in gone_segs if s.get("redacted")]
+    assert "AKIAIOSFODNN7EXAMPLE" not in [s["text"] for s in gone_segs if s.get("tier")]
 
     undo = c.post("/api/undo", json={"token": token, "conversation_uuid": row["uuid"]}).get_json()
     assert undo["redactions"] == 0
     back = c.get(f"/api/transcript?token={token}&index={row['index']}").get_json()
-    assert "AKIAIOSFODNN7EXAMPLE" in back["messages"][0]["text"]
+    back_segs = back["messages"][0]["segments"]
+    # Undo restores it as an ordinary flagged run again — the box is gone.
+    assert "AKIAIOSFODNN7EXAMPLE" not in [s["text"] for s in back_segs if s.get("redacted")]
+    assert "AKIAIOSFODNN7EXAMPLE" in [s["text"] for s in back_segs if s.get("tier")]
 
 
 def test_a_new_edit_after_undo_drops_the_redo_branch():
