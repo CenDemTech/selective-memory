@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Chat Data Portability - Filter and export your AI conversations with privacy in mind">
+    <title>Chat Data Portability</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .features {
+            background: white;
+            border-radius: 10px;
+            padding: 60px 40px;
+            margin-top: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .features h2 {
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 2.2em;
+            color: #333;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+        
+        .feature {
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .feature h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .feature p {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+        
+        .footer-links a:hover {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .tagline {
+                font-size: 1.1em;
+            }
+            
+            .features {
+                padding: 40px 20px;
+            }
+            
+            .features h2 {
+                font-size: 1.8em;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Chat Data Portability</h1>
+            <p class="tagline">Your conversations. Your choice. Your privacy.</p>
+            
+            <div class="badges">
+                <span class="badge">🔒 Private</span>
+                <span class="badge">🌐 Platform Agnostic</span>
+                <span class="badge">💬 Multi-Platform Support</span>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="http://127.0.0.1:5000" class="btn btn-primary">Launch App</a>
+                <a href="https://github.com/CenDemTech/chat-data-portability" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </header>
+        
+        <section class="features">
+            <h2>What Can You Do?</h2>
+            <div class="feature-grid">
+                <div class="feature">
+                    <div class="feature-icon">📤</div>
+                    <h3>Upload Conversations</h3>
+                    <p>Import your chat exports from Claude, ChatGPT, or Gemini in JSON format.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Review & Filter</h3>
+                    <p>Browse, search, and select exactly which conversations you want to keep.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Redact Sensitive Info</h3>
+                    <p>Remove personally identifiable information and other sensitive content.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <h3>Download Filtered</h3>
+                    <p>Export a clean, properly-formatted JSON file to upload anywhere.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <h3>100% Private</h3>
+                    <p>All processing happens locally on your machine. No data leaves your computer.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Cross-Platform</h3>
+                    <p>Port conversations between different AI services seamlessly.</p>
+                </div>
+            </div>
+        </section>
+        
+        <footer>
+            <p>An open-source project by <a href="https://www.cendemtech.org/" style="color: white; text-decoration: underline;">Center for Democracy & Technology</a></p>
+            
+            <div class="footer-links">
+                <a href="https://github.com/CenDemTech/chat-data-portability">GitHub</a>
+                <a href="https://github.com/CenDemTech/chat-data-portability/blob/main/README.md">Documentation</a>
+                <a href="https://github.com/CenDemTech/chat-data-portability/blob/main/PRIVACY.md">Privacy</a>
+                <a href="https://github.com/CenDemTech/chat-data-portability/blob/main/LICENSE">License (MIT)</a>
+            </div>
+            
+            <p style="margin-top: 30px; opacity: 0.8;">Built with ❤️ for data portability and user privacy</p>
+        </footer>
+    </div>
+</body>
+</html>
