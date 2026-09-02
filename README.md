@@ -1,5 +1,9 @@
 # Conversation filter for chat data portability between platforms
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/downloads/)
+[![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/CenDemTech/chat-data-portability)
+
 Open-source prototype to enable users to upload their conversation data from major LLM platforms, redact potentially sensitive information from conversations and choose which conversations they want to port from one system to another, and download a new copy of their conversation data for upload.
 
 ## Quick Install
