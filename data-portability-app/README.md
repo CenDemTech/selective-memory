@@ -402,7 +402,7 @@ search field's clear button — render dark to match.
 | `templates/index.html` | All four pages, plus the review and download modals |
 | `static/app.js` | Page transitions, upload, table, selection, transcript, build/download |
 | `static/style.css` | Styling |
-| `sample_data/conversations.json` | Claude fixture covering the awkward cases |
+| `sample_data/anthropic_conversations.json` | Claude fixture covering the awkward cases |
 | `sample_data/openai_conversations.json` | ChatGPT fixture (graph, tool nodes, a branch) |
 | `test_app.py` | End-to-end checks over the sample fixture |
 | `test_sensitivity.py` | Per-category classifier cases and the gate-safety check |

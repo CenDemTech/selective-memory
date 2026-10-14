@@ -16,7 +16,7 @@ import json
 
 import app as flask_app
 
-SAMPLE = "sample_data/conversations.json"
+SAMPLE = "sample_data/anthropic_conversations.json"
 ORIGINAL = json.load(open(SAMPLE))
 BY_UUID = {c["uuid"]: c for c in ORIGINAL}
 
