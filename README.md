@@ -25,16 +25,23 @@ Open-source prototype to enable users to upload their conversation data from maj
 
 ## How to Use
 
-1. **Select Platform** — Choose which platform service your conversation export is from (Claude or ChatGPT/OpenAI)
+This app runs entirely locally, your data never leaves your machine. 
+
+1. **Select Platform** — Choose which platform service your conversation export is from (Claude/Anthropic or ChatGPT/OpenAI)
 2. **Upload File** — Drag and drop or browse for your `conversations.json` file
 3. **Review Conversations** — View all conversations in a searchable, sortable table with metadata (date, message count, word count, sensitivity tag)
-   - Review conversations
-   - Take action on conversations with possibly sensitive content which is highlighted by category (Red, Yellow, or Green tags)
-   - Redact detected sensitive content
-   - Redact any additional content that is deemed sensitive upon review
-   - Delete messages
+   - Review conversations with possibly sensitive content which is highlighted by category (Red, Yellow, or Green tags)
+   - Redact detected suggested sensitive content
+   - Redact any additional content that is deemed sensitive upon human review
+   - Delete messages or whole turns
    - Delete conversations
-4. **Select for export** — Review the conversations you want to keep.
+4. **Select for export** — Select the conversations you want to keep and review.
 6. **Download** — Save your filtered `conversations.json` file for upload to another platform.
 
-The app runs entirely locally—your data never leaves your machine.
+### How Sensitivity Labels Work
+
+The sensitivity labels or sensitive information detection is entirely rule-based, with *no model calls*, using logic for normalized text, word-boundary regexes, and a few structural validators. The three sensitivity labels are:
+
+- `Red` — regulated data (health/finance), high-risk PII, live secrets, malicious/exploit content, legal exposure, and "what do you know about me" profile-audit questions
+- `Yellow` — quasi-identifying or commercially sensitive: geo/proximity, trackable indicators, memory-write requests, business ventures, interpersonal comms, indirect identifiers, corporate IP, creative/copyrighted material
+- `Green` — nothing matched
