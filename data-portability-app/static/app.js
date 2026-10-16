@@ -72,6 +72,30 @@ document.querySelectorAll('[data-goto]').forEach((btn) => {
   btn.addEventListener('click', () => goTo(Number(btn.dataset.goto)));
 });
 
+/* ── Theme ────────────────────────────────────────────────────────── */
+/* The stored theme is applied by an inline script in <head> so it lands before
+   the first paint; this only has to keep the button's label in sync and
+   persist the user's choice. Light is the default when nothing is stored —
+   set on <html> in the template, so it holds without JS too. */
+
+function applyTheme(theme) {
+  const light = theme !== 'dark';
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  // The button advertises what it switches *to*, not the current state.
+  $('theme-label').textContent = light ? 'Dark mode' : 'Light mode';
+  $('theme-toggle').setAttribute('aria-pressed', String(light));
+}
+
+applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+
+$('theme-toggle').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  try {
+    localStorage.setItem('theme', next);
+  } catch (e) { /* non-fatal: the theme just won't survive a reload */ }
+});
+
 /* ── Page 1 · platform ────────────────────────────────────────────── */
 
 const PLATFORM_NAMES = { claude: 'Claude', openai: 'ChatGPT' };
@@ -414,6 +438,56 @@ document.querySelectorAll('#page-3 th.sortable').forEach((th) => {
   });
 });
 
+/* ── Sensitivity tooltip ─────────────────────────────────────────────
+   Click to open, rather than a native title: the popover is positioned in
+   fixed coordinates from the icon's rect, which is what lets it escape the
+   overflow clip on .table-scroll. */
+
+const infoBtn = $('sensitivity-info');
+const infoPop = $('sensitivity-tip');
+
+function setInfoOpen(open) {
+  infoPop.hidden = !open;
+  infoBtn.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+
+  // Measure after unhiding, then clamp so it never runs off the viewport.
+  const r = infoBtn.getBoundingClientRect();
+  const width = infoPop.offsetWidth;
+  const left = Math.min(
+    Math.max(12, r.left + r.width / 2 - width / 2),
+    window.innerWidth - width - 12,
+  );
+  infoPop.style.top = `${r.bottom + 8}px`;
+  infoPop.style.left = `${left}px`;
+}
+
+infoBtn.addEventListener('click', (e) => {
+  // The icon sits inside a sortable header; without this the click bubbles up
+  // and re-sorts the column, which isn't what asking for help should do.
+  e.stopPropagation();
+  setInfoOpen(infoPop.hidden);
+});
+
+$('sensitivity-tip-close').addEventListener('click', () => {
+  setInfoOpen(false);
+  infoBtn.focus();   // hand focus back, or a keyboard user is left nowhere
+});
+
+document.addEventListener('click', (e) => {
+  if (!infoPop.hidden && !infoPop.contains(e.target)) setInfoOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !infoPop.hidden) setInfoOpen(false);
+});
+// The anchor moves with either scroller, so close rather than chase it.
+document.addEventListener('scroll', () => {
+  if (!infoPop.hidden) setInfoOpen(false);
+}, true);
+window.addEventListener('resize', () => {
+  if (!infoPop.hidden) setInfoOpen(false);
+});
+
 /* ── Row selection ───────────────────────────────────────────────────
    Three ways to pick conversations, sharing one selection set: click a row,
    shift-click to extend from the last one, or press and drag down the table.
@@ -633,8 +707,8 @@ function updateExportCta() {
   const btn = $('btn-to-export');
   btn.disabled = n === 0;
   btn.firstChild.textContent = n
-    ? `Review ${n} selected .json conversation${n === 1 ? '' : 's'} to be exported `
-    : 'Review .json file to be exported ';
+    ? `Continue to export ${n} selected .json conversation${n === 1 ? '' : 's'} `
+    : 'Continue to export .json file ';
 }
 
 /* Deleting whole conversations is now a soft delete: the server keeps them in

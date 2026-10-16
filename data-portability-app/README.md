@@ -1,11 +1,10 @@
-# Conversation Filter
+# Conversation Filter App
 
 A local mini app for filtering AI chat exports. Bring a `conversations.json`
 file, review every conversation in a table, select the ones you care about, and
 download a new JSON file with **the same structure** as the one you uploaded.
 
-Claude and ChatGPT (OpenAI) exports are supported today. A Gemini parser exists
-in the tree but isn't offered on the platform screen yet.
+Claude and ChatGPT (OpenAI) exports are supported today. A Gemini parser is not yet supported.
 
 ## Two formats, one app
 
@@ -29,7 +28,7 @@ build — works identically regardless of platform.
 Each parser exposes `ID_FIELD` (`uuid` for Claude, `id` for ChatGPT) and
 `list_conversations`, which is all the app needs to filter and index generically.
 
-## Running it
+## First run
 
 ```bash
 ./.venv/bin/python app.py

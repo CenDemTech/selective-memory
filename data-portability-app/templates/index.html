@@ -1,10 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- data-theme is set here rather than left to script, so light holds even
+     with JS disabled or localStorage unavailable. -->
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Conversation Filter</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    /* Inline in <head> on purpose: this has to run before the first paint, or
+       a stored dark theme shows a flash of light while app.js loads. */
+    (function () {
+      try {
+        var saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.dataset.theme = saved;
+        }
+      } catch (e) { /* storage throws in some private modes; light is the default */ }
+    })();
+  </script>
 </head>
 <body>
 
@@ -15,6 +29,28 @@
     </span>
     <span class="brand-name">Conversation Filter</span>
   </div>
+
+  <button class="theme-toggle" id="theme-toggle" type="button"
+          aria-pressed="false" title="Switch between light and dark mode">
+    <span class="theme-icon icon-moon" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="theme-icon icon-sun" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.1" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.4v1.5M8 13.1v1.5M14.6 8h-1.5M2.9 8H1.4M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1M12.7 12.7l-1.1-1.1M4.4 4.4 3.3 3.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </span>
+    <span class="theme-label" id="theme-label">Light mode</span>
+  </button>
+
+  <!-- Two files, swapped by theme in CSS rather than by script, so the right
+       one is correct on the very first paint. The dark-ink original would be
+       invisible on the near-black bar; the white one on the light bar. -->
+  <a class="cdt-mark" href="https://cdt.org/topics/ai-governance-lab/"
+     target="_blank" rel="noopener noreferrer">
+    <img src="{{ url_for('static', filename='img/cdt-logo.png') }}"
+         alt="Center for Democracy &amp; Technology" class="cdt-logo cdt-logo-ink">
+    <img src="{{ url_for('static', filename='img/cdt-logo-white.png') }}"
+         alt="" aria-hidden="true" class="cdt-logo cdt-logo-white">
+  </a>
 </header>
 
 <main class="stage">
@@ -141,8 +177,10 @@
               <th class="sortable num" data-sort="message_count">Messages</th>
               <th class="sortable num" data-sort="word_count">Words</th>
               <th class="sortable num" data-sort="duration_seconds">Duration</th>
-              <th class="sortable" data-sort="sensitivity_rank"
-                  title="Scans the whole conversation — your messages and the assistant's replies. Green: nothing flagged. Yellow: quasi-identifying or commercially sensitive. Red: regulated data, PII, secrets, exploits, or legal exposure. Hover a tag to see what matched.">Sensitivity</th>
+              <th class="sortable" data-sort="sensitivity_rank">Sensitivity<button
+                  type="button" class="info-icon" id="sensitivity-info"
+                  aria-expanded="false" aria-controls="sensitivity-tip"
+                  aria-label="About the sensitivity tags"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="4.9" r=".9" fill="currentColor"/><path d="M8 7.2v4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button></th>
               <th class="col-action">Action</th>
             </tr>
           </thead>
@@ -157,7 +195,7 @@
           <span class="select-hint">Shift-click or drag down the rows to select a range</span>
         </div>
         <button class="btn primary" id="btn-to-export" disabled>
-          Review .json file to be exported <span class="btn-glyph" aria-hidden="true">→</span>
+          Continue to export .json file <span class="btn-glyph" aria-hidden="true">→</span>
         </button>
       </div>
 
@@ -213,7 +251,7 @@
           <span class="showing" id="export-summary"></span>
         </div>
         <button class="btn primary" id="btn-build">
-          Export (.json) conversation file <span class="btn-glyph" aria-hidden="true">⭳</span>
+          Export .json conversation file <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M10 4.3v8.4m0 0 3.4-3.4M10 12.7 6.6 9.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 13.6V15a1.1 1.1 0 0 0 1.1 1.1h8.6a1.1 1.1 0 0 0 1.1-1.1v-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
         </button>
       </div>
 
@@ -225,6 +263,25 @@
     </div>
   </section>
 </main>
+
+<!-- Sits outside .stage, so it pins to the bottom of every page at once:
+     the pages scroll inside .stage, never past this line. -->
+<footer class="sitefoot">
+  Made with love ❤️ by Center for Democracy & Technology
+</footer>
+
+<!-- Lives at body level, not in the table: .table-scroll sets overflow:auto,
+     which would clip a popover positioned inside the sticky header. -->
+<div class="info-pop" id="sensitivity-tip" role="tooltip" hidden>
+  <button type="button" class="info-pop-close" id="sensitivity-tip-close"
+          aria-label="Close">✕</button>
+  The sensitivity label is generated by rule-based logic run by a local script
+  when your data is uploaded. No model calls are made. It scans the whole
+  conversation — your messages and the assistant's replies.
+  <strong>Green:</strong> nothing flagged. <strong>Yellow:</strong> quasi-identifying
+  or commercially sensitive. <strong>Red:</strong> regulated data, PII, secrets,
+  exploits, or legal exposure. Hover over a tag to see what matched.
+</div>
 
 <!-- ── Download modal (after a build) ──────────────────────────────── -->
 <div class="overlay" id="download-modal" hidden>
