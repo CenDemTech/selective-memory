@@ -4,7 +4,7 @@
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/CenDemTech/chat-data-portability)
 
-Open-source prototype to enable users to upload their conversation data from major LLM platforms, redact potentially sensitive information from conversations and choose which conversations they want to port from one system to another, and download a new copy of their conversation data for upload.
+Open-source proof of concept to enable users to upload their conversation data from major AI platforms, redact potentially sensitive information from conversations and choose which conversations they want to port from one system to another, and download a new copy of their conversation data for upload.
 
 ## Quick Install
 
@@ -30,7 +30,7 @@ This app runs entirely locally, your data never leaves your machine.
 1. **Select Platform** — Choose which platform service your conversation export is from (Claude/Anthropic or ChatGPT/OpenAI)
 2. **Upload File** — Drag and drop or browse for your `conversations.json` file
 > [!TIP]
-> To try it out, use example `conversations.json` files in the [sample data folder](`data-portability-app/sample_data`)
+> To try it out, use example `conversations.json` files in the [sample data folder](data-portability-app/sample_data)
 3. **Review Conversations** — View all conversations in a searchable, sortable table with metadata (date, message count, word count, sensitivity tag)
    - Review conversations with possibly sensitive content which is highlighted by category (Red, Yellow, or Green tags)
    - Redact detected sensitive content
