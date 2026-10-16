@@ -41,12 +41,15 @@
     <span class="theme-label" id="theme-label">Light mode</span>
   </button>
 
-  <!-- The logo is dark ink on transparent, so it sits on a light chip to stay
-       legible against the near-black bar. -->
+  <!-- Two files, swapped by theme in CSS rather than by script, so the right
+       one is correct on the very first paint. The dark-ink original would be
+       invisible on the near-black bar; the white one on the light bar. -->
   <a class="cdt-mark" href="https://cdt.org/topics/ai-governance-lab/"
      target="_blank" rel="noopener noreferrer">
     <img src="{{ url_for('static', filename='img/cdt-logo.png') }}"
-         alt="Center for Democracy &amp; Technology" class="cdt-logo">
+         alt="Center for Democracy &amp; Technology" class="cdt-logo cdt-logo-ink">
+    <img src="{{ url_for('static', filename='img/cdt-logo-white.png') }}"
+         alt="" aria-hidden="true" class="cdt-logo cdt-logo-white">
   </a>
 </header>
 

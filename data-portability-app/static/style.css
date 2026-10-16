@@ -248,16 +248,21 @@ code {
 :root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .icon-moon { display: flex; }
 
+/* No background chip any more: each theme now has a logo whose ink already
+   contrasts with its bar, so the light plate the dark-ink art used to need
+   is obsolete (and was invisible against the light theme's bar regardless). */
 .cdt-mark {
   display: flex;
   align-items: center;
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: var(--white);
   transition: opacity .18s var(--ease);
 }
 .cdt-mark:hover { opacity: .82; }
 .cdt-logo { display: block; height: 22px; width: auto; }
+
+/* Light theme shows the dark-ink original; dark theme shows the white one. */
+.cdt-logo-white { display: none; }
+:root[data-theme="dark"] .cdt-logo-ink { display: none; }
+:root[data-theme="dark"] .cdt-logo-white { display: block; }
 .brand { display: flex; align-items: center; gap: 9px; }
 .brand-name { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
 .brand-mark {
