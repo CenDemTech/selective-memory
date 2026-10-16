@@ -72,6 +72,30 @@ document.querySelectorAll('[data-goto]').forEach((btn) => {
   btn.addEventListener('click', () => goTo(Number(btn.dataset.goto)));
 });
 
+/* ── Theme ────────────────────────────────────────────────────────── */
+/* The stored theme is applied by an inline script in <head> so it lands before
+   the first paint; this only has to keep the button's label in sync and
+   persist the user's choice. Light is the default when nothing is stored —
+   set on <html> in the template, so it holds without JS too. */
+
+function applyTheme(theme) {
+  const light = theme !== 'dark';
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  // The button advertises what it switches *to*, not the current state.
+  $('theme-label').textContent = light ? 'Dark mode' : 'Light mode';
+  $('theme-toggle').setAttribute('aria-pressed', String(light));
+}
+
+applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+
+$('theme-toggle').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  try {
+    localStorage.setItem('theme', next);
+  } catch (e) { /* non-fatal: the theme just won't survive a reload */ }
+});
+
 /* ── Page 1 · platform ────────────────────────────────────────────── */
 
 const PLATFORM_NAMES = { claude: 'Claude', openai: 'ChatGPT' };

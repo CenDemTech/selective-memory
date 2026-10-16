@@ -1,3 +1,29 @@
+/* ── Bundled fonts ────────────────────────────────────────────────── */
+/* Served from static/fonts rather than a CDN: the app promises that nothing
+   leaves the machine, and a webfont request to Google would break that on
+   every page load. Latin subset, 400 and 700 only — the weights actually used.
+   Licences ship alongside the files (Roboto: Apache-2.0, Inter: SIL OFL-1.1). */
+@font-face {
+  font-family: 'Roboto';
+  src: url('fonts/roboto-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Roboto';
+  src: url('fonts/roboto-latin-700-normal.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/inter-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/inter-latin-700-normal.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
 /* ── Base ─────────────────────────────────────────────────────────── */
 :root {
   /* ── Brand palette ──────────────────────────────────────────────── */
@@ -53,12 +79,60 @@
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, .62);
   --ease: cubic-bezier(.22, .61, .36, 1);
 
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+  --font: -apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", "Inter",
           "Helvetica Neue", Arial, sans-serif;
   /* Display serif for headings — matches the design's Georgia-style titles. */
   --font-serif: Georgia, "Times New Roman", "Iowan Old Style", "Palatino Linotype",
                 Palatino, "Book Antiqua", serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ── Light theme ──────────────────────────────────────────────────────
+   Only the tokens change: every rule below already reads from these vars,
+   so the layout, spacing, and component CSS are shared by both themes.
+   Applied as [data-theme="light"] on <html> by the toggle in the top bar. */
+:root[data-theme="light"] {
+  --blue-bright: #1A52D6;        /* links need to darken against white */
+
+  --bg:        #F6F8FC;
+  --surface:   #FFFFFF;
+  --surface-2: #F0F4FA;
+  --surface-3: #E4EAF4;
+
+  --ink:       #0E1526;
+  --ink-soft:  rgba(14, 21, 38, .66);
+  --ink-faint: rgba(14, 21, 38, .44);
+
+  --border:        rgba(14, 21, 38, .13);
+  --border-strong: rgba(14, 21, 38, .24);
+  --tint:          rgba(14, 21, 38, .035);
+  --tint-strong:   rgba(14, 21, 38, .07);
+  --glass:         rgba(255, 255, 255, .86);
+
+  --selected:       rgba(46, 107, 246, .10);
+  --selected-hover: rgba(46, 107, 246, .17);
+  --edit-wash: rgba(46, 107, 246, .07);
+  --edit-edge: var(--blue);
+
+  /* The traffic light inverts: on white these carry contrast as dark text
+     over a pale fill, the reverse of the dark theme's bright-on-translucent. */
+  --danger:        #B3261E;
+  --danger-soft:   rgba(224, 80, 66, .13);
+  --danger-border: rgba(179, 38, 30, .34);
+  --warn:          #8A6100;
+  --warn-soft:     rgba(210, 160, 60, .22);
+  --ok:            #10693F;
+  --ok-soft:       rgba(70, 200, 140, .22);
+  --mark-red:      rgba(230, 90, 76, .30);
+  --mark-yellow:   rgba(220, 175, 70, .45);
+  --mark-yellow-edge: #B07D10;
+  --danger-surface:   #FFF6F7;
+  --danger-surface-2: #FBE9EC;
+
+  /* Dark-theme shadows are near-opaque black; on white that reads as grime. */
+  --shadow-sm: 0 1px 2px rgba(14, 21, 38, .08);
+  --shadow-md: 0 8px 24px rgba(14, 21, 38, .12);
+  --shadow-lg: 0 24px 60px rgba(14, 21, 38, .18);
 }
 
 * { box-sizing: border-box; }
@@ -68,8 +142,10 @@
 [hidden] { display: none !important; }
 
 html, body { margin: 0; height: 100%; }
-/* Render native controls (checkboxes, scrollbars, the search clear button) dark. */
+/* Render native controls (checkboxes, scrollbars, the search clear button) to
+   match the theme — without this the light theme keeps dark scrollbars. */
 :root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
 
 body {
   background: var(--bg);
@@ -81,8 +157,8 @@ body {
   flex-direction: column;
 }
 
-/* Headings use the display serif; body, tables, and controls stay sans. */
-h1 { font-family: var(--font-serif); font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; margin: 0 0 8px; }
+/* h1 is sans; h2 keeps the display serif. Body, tables, and controls stay sans. */
+h1 { font-family: Roboto, Inter, sans-serif; font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; margin: 0 0 8px; }
 h2 { font-family: var(--font-serif); font-size: 18px; font-weight: 700; margin: 0; letter-spacing: 0; }
 
 code {
@@ -144,6 +220,44 @@ code {
   top: 0;
   z-index: 20;
 }
+
+/* The toggle carries the margin-left:auto, so it and the logo travel together
+   as one right-aligned group rather than being split to opposite edges. */
+.theme-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .18s var(--ease), color .18s var(--ease),
+              border-color .18s var(--ease);
+}
+.theme-toggle:hover { background: var(--surface-3); color: var(--ink); border-color: var(--blue-line); }
+.theme-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.theme-icon { display: flex; width: 16px; height: 16px; }
+.theme-icon svg { width: 16px; height: 16px; }
+/* Dark theme offers the sun (switch to light); light theme offers the moon. */
+.theme-toggle .icon-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .icon-moon { display: flex; }
+
+.cdt-mark {
+  display: flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--white);
+  transition: opacity .18s var(--ease);
+}
+.cdt-mark:hover { opacity: .82; }
+.cdt-logo { display: block; height: 22px; width: auto; }
 .brand { display: flex; align-items: center; gap: 9px; }
 .brand-name { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
 .brand-mark {
@@ -196,7 +310,21 @@ code {
 .stepchips li.done .chip-dot { background: var(--ok-soft); color: var(--ok); }
 
 /* ── Page transitions ─────────────────────────────────────────────── */
-.stage { flex: 1; position: relative; display: flex; }
+.stage { flex: 1; min-height: 0; position: relative; display: flex; }
+
+/* Credit line. A flex sibling of .stage rather than a fixed element: the
+   pages scroll inside .stage, so this stays put without overlapping them. */
+.sitefoot {
+  flex: none;
+  padding: 10px 24px;          /* 24px matches .topbar, so it aligns with the brand */
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 13px;
+  text-align: left;
+}
 
 /* The incoming page waits for the outgoing one to clear before fading in,
    so the two never sit legibly on top of each other mid-transition. */
