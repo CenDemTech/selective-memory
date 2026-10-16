@@ -609,6 +609,75 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { color: var(--ink); }
 th.sortable::after { content: ""; opacity: 0; margin-left: 5px; }
+
+/* The tooltip hangs off this icon rather than the whole header, so hovering
+   anywhere in the cell no longer fires it. cursor:help marks it as the target. */
+/* A real <button> so click and keyboard both work; button chrome is reset back
+   to a bare icon. It opens #sensitivity-tip below. */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  margin-left: 5px;
+  vertical-align: -3px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color .15s var(--ease);
+}
+.info-icon:hover,
+.info-icon[aria-expanded="true"] { color: var(--blue-bright); }
+.info-icon:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 50%; }
+.info-icon svg { width: 14px; height: 14px; display: block; }
+
+/* position:fixed with JS-set coordinates, so it escapes .table-scroll's
+   overflow clip. Above the sticky header and top bar, below the modal overlay
+   (40). Type is reset: the header it hangs off is uppercase 10.5px. */
+.info-pop {
+  position: fixed;
+  z-index: 30;
+  width: 310px;
+  padding: 11px 30px 11px 13px;   /* right gutter clears .info-pop-close */
+  border-radius: 10px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--ink);
+  font: 400 12.5px/1.55 var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+}
+.info-pop strong { font-weight: 600; color: var(--ink); }
+
+/* Absolute against the fixed .info-pop. The popover's right padding is widened
+   above so the copy doesn't run underneath it. */
+.info-pop-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+.info-pop-close:hover { background: var(--tint-strong); color: var(--ink); }
+.info-pop-close:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 th.sortable.asc::after { content: "↑"; opacity: .7; }
 th.sortable.desc::after { content: "↓"; opacity: .7; }
 .col-check { width: 42px; }
@@ -847,6 +916,9 @@ body.is-advanced .review-btn:hover {
 }
 .btn:active { transform: scale(.985); }
 .btn-glyph { font-size: 12px; opacity: .9; }
+/* Separate from .btn-glyph, which sizes a text arrow; this carries an SVG. */
+.btn-icon { display: inline-flex; align-items: center; opacity: .9; }
+.btn-icon svg { width: 15px; height: 15px; display: block; }
 
 .btn.primary { background: var(--blue); color: var(--white); }
 .btn.primary:hover { background: var(--blue-hover); }
