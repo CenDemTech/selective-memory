@@ -221,6 +221,18 @@ function formatDate(value) {
   });
 }
 
+/* Two-line date for the Started / Last updated table cells: the date sits above
+   the time (muted), so those columns stay narrow and every column fits without a
+   horizontal scroll. The single-line formatDate above is still used elsewhere. */
+function formatDateCell(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (isNaN(d)) return '—';
+  const date = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `<span class="when-date">${date}</span><span class="when-time">${time}</span>`;
+}
+
 function sortRows(rows) {
   const { key, dir } = state.sort;
   const factor = dir === 'asc' ? 1 : -1;
@@ -251,8 +263,8 @@ function tombstoneRowHtml(c) {
     <td class="col-check"></td>
     <td><div class="name-cell"><div class="name-row"><span class="conv-name deleted-name"
         title="${escapeAttr(c.name)}">${escapeHtml(c.name)}</span></div></div></td>
-    <td class="muted">${formatDate(c.created_at)}</td>
-    <td class="muted">${formatDate(c.updated_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.created_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.updated_at)}</td>
     <td class="num">${c.message_count}</td>
     <td class="num">${c.word_count.toLocaleString()}</td>
     <td class="num muted">${c.duration}</td>
@@ -284,8 +296,8 @@ function rowHtml(c) {
         <div class="name-row"><span class="conv-name"
             title="${escapeAttr(c.name)}">${escapeHtml(c.name)}</span>${chip}</div>
         ${summaryLine}</div></td>
-    <td class="muted">${formatDate(c.created_at)}</td>
-    <td class="muted">${formatDate(c.updated_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.created_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.updated_at)}</td>
     <td class="num">${c.message_count}</td>
     <td class="num">${c.word_count.toLocaleString()}</td>
     <td class="num muted">${c.duration}</td>
@@ -307,18 +319,22 @@ function exportRowHtml(c) {
   return `
     <td><div class="name-cell"><div class="name-row"><span class="conv-name"
         title="${escapeAttr(c.name)}">${escapeHtml(c.name)}</span></div></div></td>
-    <td class="muted">${formatDate(c.created_at)}</td>
-    <td class="muted">${formatDate(c.updated_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.created_at)}</td>
+    <td class="muted when-cell">${formatDateCell(c.updated_at)}</td>
     <td class="num">${c.message_count}</td>
     <td class="num">${c.word_count.toLocaleString()}</td>
     <td class="num muted">${c.duration}</td>
     <td>${sensitivityTag(c)}</td>
     <td class="num"><span class="count-pill ${c.redactions ? 'on' : ''}">${c.redactions || 0}</span></td>
     <td class="num"><span class="count-pill ${c.deletions ? 'on' : ''}">${c.deletions || 0}</span></td>
+    <td class="col-action"><button class="review-btn" data-index="${c.index}">Review</button></td>
   `;
 }
 
 function fillTbody(tbody, rows, builder = rowHtml) {
+  // Both tables open the transcript on row click / Review. The Export table
+  // reuses the same affordances so edits made there fold straight back in.
+  const openable = tbody.id === 'tbody' || tbody.id === 'export-tbody';
   tbody.innerHTML = '';
   const frag = document.createDocumentFragment();
   for (const c of rows) {
@@ -328,6 +344,13 @@ function fillTbody(tbody, rows, builder = rowHtml) {
     else {
       if (state.selected.has(c.uuid)) tr.classList.add('selected');
       if ((c.redactions || 0) + (c.deletions || 0)) tr.classList.add('modified');
+      if (openable) {
+        tr.dataset.index = c.index;
+        tr.classList.add('row-open');
+        tr.tabIndex = 0;
+        tr.setAttribute('role', 'button');
+        tr.setAttribute('aria-label', `Review ${c.name}`);
+      }
     }
     tr.innerHTML = builder(c);
     frag.appendChild(tr);
@@ -643,6 +666,15 @@ function endDrag() {
     if (drag && drag.tbody === tbody) extendDragTo(e.target.closest('tr'));
   });
 
+  // A focused row opens its conversation on Enter/Space, for keyboard users.
+  tbody.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tr = e.target.closest('tr.row-open');
+    if (!tr || e.target.closest('input, button')) return;
+    e.preventDefault();
+    openTranscript(Number(tr.dataset.index));
+  });
+
   tbody.addEventListener('click', (e) => {
     const trash = e.target.closest('.row-delete');
     if (trash) {
@@ -650,21 +682,45 @@ function endDrag() {
       return;
     }
 
-    const reviewBtn = e.target.closest('.review-btn');
-    if (reviewBtn) {
-      openTranscript(Number(reviewBtn.dataset.index));
+    const tr = e.target.closest('tr');
+    if (!tr || isDeletedRow(tr)) return;   // tombstones do nothing
+
+    // The checkbox column is the one spot that selects rather than opens.
+    if (e.target.closest('.col-check')) {
+      const box = tr.querySelector('.col-check input');
+      if (box && e.target !== box) box.checked = !box.checked;
+      anchorUuid = tr.dataset.uuid;
+      setSelected(tr.dataset.uuid, box ? box.checked : !state.selected.has(tr.dataset.uuid));
       return;
     }
 
-    const tr = e.target.closest('tr');
-    if (!tr || isDeletedRow(tr)) return;   // tombstones aren't selectable
-    const box = tr.querySelector('.col-check input');
-    if (box && e.target !== box) box.checked = !box.checked;
-
-    anchorUuid = tr.dataset.uuid;
-    setSelected(tr.dataset.uuid, box ? box.checked : !state.selected.has(tr.dataset.uuid));
+    // Anywhere else on the row (the Review button included) opens the transcript.
+    const index = Number(tr.dataset.index);
+    if (!Number.isNaN(index)) openTranscript(index);
   });
 });
+
+/* The Export table has no selection or drag — a row (or its Review button) just
+   opens the transcript modal in read-only mode: this is the final review before
+   export, so it shows the conversation with its edits applied but no editing tools. */
+(() => {
+  const tbody = $('export-tbody');
+
+  tbody.addEventListener('click', (e) => {
+    const tr = e.target.closest('tr.row-open');
+    if (!tr) return;
+    const index = Number(tr.dataset.index);
+    if (!Number.isNaN(index)) openTranscript(index, { readOnly: true });
+  });
+
+  tbody.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tr = e.target.closest('tr.row-open');
+    if (!tr || e.target.closest('input, button')) return;
+    e.preventDefault();
+    openTranscript(Number(tr.dataset.index), { readOnly: true });
+  });
+})();
 
 document.addEventListener('mousemove', (e) => { pointer.x = e.clientX; pointer.y = e.clientY; });
 document.addEventListener('mouseup', endDrag);
@@ -814,7 +870,7 @@ function resetHighlightNav() {
   // The finder is always present in edit mode so the header reads the same on
   // every conversation; a green one just shows it greyed and stateless. In
   // review mode there's nothing to navigate when empty, so it stays hidden.
-  $('hl-nav').hidden = false;
+  $('hl-nav').hidden = modalReadOnly;   // the finder is an editing tool; hidden in read-only
   $('transcript-modal').classList.toggle('no-highlights', empty);
   $('hl-select').disabled = empty;
   $('hl-redact-all').disabled = empty;
@@ -826,11 +882,16 @@ function resetHighlightNav() {
 function rebuildHighlightSelect() {
   const sel = $('hl-select');
   const n = highlights.length;
-  const opts = [`<option value="-1">${n} Highlight${n === 1 ? '' : 's'} Detected</option>`];
+  const placeholder = n ? 'Potentially Sensitive Data Detected'
+                        : 'No Potentially Sensitive Data Detected';
+  const opts = [`<option value="-1">${placeholder}</option>`];
   for (let i = 0; i < n; i++) {
     const tier = highlights[i].classList.contains('red') ? 'Red'
                : highlights[i].classList.contains('yellow') ? 'Yellow' : '';
-    const label = tier ? `Highlight ${i + 1} · ${tier}` : `Highlight ${i + 1}`;
+    // Show the actual flagged text (collapsed + trimmed) rather than "Highlight N".
+    let text = highlights[i].textContent.replace(/\s+/g, ' ').trim();
+    if (text.length > 42) text = text.slice(0, 41).trimEnd() + '…';
+    const label = tier ? `${text} · ${tier}` : text;
     opts.push(`<option value="${i}">${escapeHtml(label)}</option>`);
   }
   sel.innerHTML = opts.join('');
@@ -902,12 +963,12 @@ function renderMessage(message) {
   return segments.map((seg) => {
     const body = escapeHtml(seg.text);
     if (seg.redacted) {
-      return `<span class="redaction" title="Redacted — removed from the exported file">${body}</span>`;
+      return `<span class="redaction" title="Redacted, removed from the exported file">${body}</span>`;
     }
     if (!seg.tier) return body;
     // data-msg lets a redaction name the message the run belongs to.
     return `<mark class="hl ${seg.tier.toLowerCase()}" data-msg="${escapeAttr(message.uuid || '')}"
-      title="Flagged: ${escapeAttr(seg.label)} — click to redact just this run (edit mode)">${body}</mark>`;
+      title="Flagged: ${escapeAttr(seg.label)}. Click to redact just this run.">${body}</mark>`;
   }).join('');
 }
 
@@ -932,7 +993,7 @@ function groupIntoTurns(messages) {
    modal is the place editing happens, so there's no mode to arm first. */
 function controlsHtml(kind) {
   const noun = kind === 'turn' ? 'turn' : 'message';
-  const checkTip = `Select this ${noun} — then use the delete button to remove several at once`;
+  const checkTip = `Select this ${noun}, then use the delete button to remove several at once`;
   const trashTip = `Delete this ${noun}`;
   return `<span class="edit-controls ${kind}-controls">
       <input type="checkbox" class="${kind}-check" aria-label="Select ${noun} for deletion" title="${checkTip}">
@@ -971,88 +1032,44 @@ function renderTurn(msgs, i) {
 /* The conversation the modal is currently showing. */
 let openConv = null;
 
-/* The Review modal opens read-only; the Edit button reveals the editing tools
-   (redact buttons, per-turn/message checkboxes and trash, delete, save, and
-   drag-to-delete). This is independent of a conversation's sensitivity, so a
-   green conversation can be edited the same way. */
-let editing = false;
-// The edit tally at the moment edit mode was entered, so an exit can tell
-// whether unsaved changes were made in this session.
-let editBaselineRevisions = 0;
+/* Opened from the Edit table the window carries every editing tool; opened from
+   the Export table it's read-only — the final review shows the conversation with
+   its edits applied but no way to change it further. */
+let modalReadOnly = false;
 
-function currentRevisions() {
-  return openConv ? (openConv.redactions || 0) + (openConv.deletions || 0) : 0;
+/* Resets the per-open UI state each time a conversation is opened. Editing tools
+   are shown when editable and hidden (via the `view-only` class) when read-only. */
+function resetModalEdits() {
+  state.msgSelection.clear();
+  document.querySelectorAll('#modal-body .msg-selected').forEach((el) => {
+    el.classList.remove('msg-selected');
+    const box = el.querySelector('.msg-check');
+    if (box) box.checked = false;
+  });
+  // Highlight mode is on by default when editable, off (and inert) when read-only.
+  setHighlightMode(!modalReadOnly);
+  deselectHighlight();
+  refreshTurnControls();
+  updateModalDeleteButton();
 }
-
-function setEditing(on) {
-  editing = on;
-  $('transcript-modal').classList.toggle('editing', on);
-  const btn = $('edit-toggle');
-  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  btn.querySelector('.edit-toggle-label').textContent = on ? 'Exit Edit' : 'Edit';
-  btn.title = on ? 'Exit editing' : 'Show editing tools';
-  if (on) {
-    editBaselineRevisions = currentRevisions();
-  } else {
-    // Leaving edit mode drops any pending message selection and highlight mode.
-    state.msgSelection.clear();
-    document.querySelectorAll('#modal-body .msg-selected').forEach((el) => {
-      el.classList.remove('msg-selected');
-      const box = el.querySelector('.msg-check');
-      if (box) box.checked = false;
-    });
-    setHighlightMode(false);
-    deselectHighlight();
-    refreshTurnControls();
-    updateModalDeleteButton();
-  }
-}
-
-/* Exit edit mode back to the read-only view (staying in the modal). If edits
-   were made this session and not saved, confirm first and roll them back to the
-   state you entered on — that's what "exit without saving" means here, since
-   every edit is otherwise written straight to the working copy. */
-async function exitEditMode() {
-  if (currentRevisions() !== editBaselineRevisions) {
-    const ok = await confirmDialog(
-      'You made changes to the conversation without saving. Are you sure you want to exit without saving?',
-      { title: 'Exit without saving?', okLabel: 'Exit without saving', okClass: 'danger' }
-    );
-    if (!ok) return;
-    let guard = 0;
-    while (openConv && currentRevisions() > editBaselineRevisions &&
-           !$('undo-btn').disabled && guard++ < 200) {
-      await runHistory('undo');
-    }
-  }
-  setEditing(false);
-}
-
-$('edit-toggle').addEventListener('click', () => {
-  if (editing) exitEditMode();
-  else setEditing(true);
-});
 
 /* ── Highlight mode ───────────────────────────────────────────────────
-   In edit mode, turning this on lets you drag-select any run of text inside a
-   message — the selection turns red — and a floating Delete button appears just
-   above it. One click redacts exactly that run (boxed like any redaction). With
-   the toggle off, selecting text does nothing special. */
-let highlightMode = false;
+   Turning this on lets you drag-select any run of text inside a message — the
+   selection turns red — and a floating Delete button appears just above it. One
+   click redacts exactly that run (boxed like any redaction). With the toggle off,
+   selecting text does nothing special. */
+let highlightMode = true;   // on by default; the user can click the icon to disable
 let pendingTextDelete = null;
 
 function setHighlightMode(on) {
   highlightMode = on;
-  $('highlight-mode').checked = on;
-  // NB: a distinct class name — `.highlight-mode` is the toggle *label*, and
-  // reusing it here would drop that label's `user-select:none` onto the whole
-  // modal and make the transcript unselectable. `hl-mode` also paints the
-  // selection red.
+  $('highlight-mode').setAttribute('aria-pressed', on ? 'true' : 'false');
+  // `hl-mode` on the modal paints the text selection red while the mode is on.
   $('transcript-modal').classList.toggle('hl-mode', on);
   if (!on) hideTextFab();
 }
 
-$('highlight-mode').addEventListener('change', (e) => setHighlightMode(e.target.checked));
+$('highlight-mode').addEventListener('click', () => setHighlightMode(!highlightMode));
 
 /* Count which copy of ``text`` sits at the start of ``range`` within ``bubble``,
    so the server redacts that instance rather than every match. */
@@ -1076,7 +1093,7 @@ function positionFab(rect) {
    a bubble while Highlight mode is on, or a sensitivity highlight the finder is
    parked on. Either sets `pendingTextDelete` and shows the button over it. */
 function updateTextFab() {
-  if ($('transcript-modal').hidden || !editing) return hideTextFab();
+  if ($('transcript-modal').hidden) return hideTextFab();
   const body = $('modal-body');
   const sel = window.getSelection();
 
@@ -1129,7 +1146,9 @@ $('modal-body').addEventListener('scroll', () => {
 // Pressing the button must not collapse the selection before the click lands.
 $('text-delete-fab').addEventListener('mousedown', (e) => e.preventDefault());
 
-$('text-delete-fab').addEventListener('click', async () => {
+/* Redact whatever the Redact fab is currently offering (a hand-selected run or a
+   parked flagged run). Shared by the fab click and the Delete/Backspace key. */
+async function redactPendingText() {
   if (!openConv || !pendingTextDelete) return;
   const body = { token: state.token, conversation_uuid: openConv.uuid, ...pendingTextDelete };
   try {
@@ -1150,18 +1169,34 @@ $('text-delete-fab').addEventListener('click', async () => {
   } catch (err) {
     alert(err.message);
   }
+}
+
+$('text-delete-fab').addEventListener('click', redactPendingText);
+
+/* With text highlighted in Highlight mode, Delete/Backspace redacts it too —
+   the same as clicking Redact. */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+  if (modalReadOnly) return;   // read-only review: nothing to redact
+  if ($('transcript-modal').hidden || $('text-delete-fab').hidden || !pendingTextDelete) return;
+  // Don't hijack the key while focus is in a form control.
+  const t = e.target;
+  if (t instanceof Element && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+  e.preventDefault();
+  redactPendingText();
 });
 
-function openTranscript(index) {
+function openTranscript(index, { readOnly = false } = {}) {
   openConv = state.conversations.find((c) => c.index === index) || null;
-  state.msgSelection.clear();
-  setEditing(false);   // always open read-only
+  modalReadOnly = readOnly;
+  $('transcript-modal').classList.toggle('view-only', readOnly);
+  resetModalEdits();   // sets the tool set to match read-only vs editable
   $('modal-title').textContent = openConv ? openConv.name : 'Conversation';
   $('modal-sub').textContent = '';
   $('modal-body').innerHTML = '<div class="spinner"></div>';
   $('hl-nav').hidden = true;
   showOverlay('transcript-modal');
-  return loadTranscript();
+  return loadTranscript({ keepScroll: false });   // a fresh open starts at the top
 }
 
 function describeOpenConv() {
@@ -1175,7 +1210,7 @@ function describeOpenConv() {
   ];
   // The tag scans every message, so a highlight always implies a non-Green tag.
   if (conv.sensitivity !== 'Green') {
-    parts.push(`${conv.sensitivity}: ${conv.sensitivity_reasons.join(', ')} — highlighted below`);
+    parts.push(`${conv.sensitivity}: ${conv.sensitivity_reasons.join(', ')}, highlighted below`);
   }
   return parts.join(' · ');
 }
@@ -1194,8 +1229,11 @@ function updateEditStatus() {
   el.title = bits.join(' · ');
 }
 
-async function loadTranscript() {
+async function loadTranscript({ keepScroll = true } = {}) {
   if (!openConv) return;
+  // Hold the scroll position across an edit reload so redacting doesn't jump the
+  // view to the top. A fresh open (keepScroll: false) still starts at the top.
+  const prevScroll = keepScroll ? $('modal-body').scrollTop : 0;
   // Clear the fab and the parked highlight *before* the async fetch. Otherwise a
   // `selectionchange` queued by the delete (removeAllRanges) can fire mid-reload
   // while `hlIndex` still points at the old, not-yet-replaced mark, and reopen
@@ -1220,7 +1258,7 @@ async function loadTranscript() {
     }
 
     $('modal-body').innerHTML = groupIntoTurns(data.messages).map(renderTurn).join('');
-    $('modal-body').scrollTop = 0;
+    $('modal-body').scrollTop = prevScroll;   // keep the view where it was
     resetHighlightNav();
     refreshTurnControls();
     updateModalDeleteButton();
@@ -1233,30 +1271,73 @@ async function loadTranscript() {
   }
 }
 
-/* Edits are written to the working copy as they're made, so Save Changes is a
-   "keep these and step out of edit mode" — it leaves the review window open,
-   just no longer editing, and marks this session's edits as saved (so exiting
-   afterwards won't warn). */
+/* Edits are written to the working copy as they're made, so Save Changes is just
+   a "done" that closes the window. */
 $('save-changes').addEventListener('click', () => {
   hideTextFab();
-  setEditing(false);
+  hideOverlay('transcript-modal');
 });
 
 /* ── Redaction ────────────────────────────────────────────────────── */
 
-// Selecting a flagged run is an edit-mode action: clicking parks the finder on
-// it (and shows a Delete button over it); clicking the selected one unclicks it.
+// Clicking a flagged run parks the finder on it (and shows the Redact button
+// over it); clicking the selected one unclicks it. In Highlight mode, a single
+// click on any other text selects the whole word under the cursor and shows the
+// Redact button — no double-click or drag needed.
 $('modal-body').addEventListener('click', (e) => {
-  if (!editing) return;
-  // A drag that ends on a highlight is a text selection, not a click.
+  if (modalReadOnly) return;   // read-only review: no selecting or redacting
+  // A drag that ends inside a bubble is a text selection, not a click.
   if (!window.getSelection().isCollapsed) return;
+
   const mark = e.target.closest('mark.hl');
-  if (!mark) return;
-  const at = highlights.indexOf(mark);
-  if (at < 0) return;
-  if (at === hlIndex) deselectHighlight();
-  else selectHighlight(at);
+  if (mark) {
+    const at = highlights.indexOf(mark);
+    if (at < 0) return;
+    if (at === hlIndex) deselectHighlight();
+    else selectHighlight(at);
+    return;
+  }
+
+  // Single-click-to-select a word, so one click pops the Redact button.
+  if (highlightMode) {
+    const bubble = e.target.closest('.bubble');
+    if (bubble && !e.target.closest('.redaction')) selectWordAt(e.clientX, e.clientY, bubble);
+  }
 });
+
+/* Find the caret under a point, across browsers. */
+function caretPosFromPoint(x, y) {
+  if (document.caretPositionFromPoint) {
+    const p = document.caretPositionFromPoint(x, y);
+    return p ? { node: p.offsetNode, offset: p.offset } : null;
+  }
+  if (document.caretRangeFromPoint) {
+    const r = document.caretRangeFromPoint(x, y);
+    return r ? { node: r.startContainer, offset: r.startOffset } : null;
+  }
+  return null;
+}
+
+/* Select the whole non-whitespace token under (x, y), then show the Redact fab.
+   Non-whitespace (rather than \w) keeps tokens like IPs and keys in one piece. */
+function selectWordAt(x, y, bubble) {
+  const pos = caretPosFromPoint(x, y);
+  if (!pos || pos.node.nodeType !== Node.TEXT_NODE || !bubble.contains(pos.node)) return;
+  const text = pos.node.data;
+  let start = Math.min(pos.offset, text.length);
+  let end = start;
+  while (start > 0 && /\S/.test(text[start - 1])) start--;
+  while (end < text.length && /\S/.test(text[end])) end++;
+  if (end === start) return;   // clicked on whitespace — nothing to select
+
+  const range = document.createRange();
+  range.setStart(pos.node, start);
+  range.setEnd(pos.node, end);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  updateTextFab();
+}
 
 /* A redaction leaves a grey box with the removed text greyed out inside, so it's
    clear what was taken out. The run is stripped from the export, but the server
@@ -1367,6 +1448,7 @@ function refreshTurnControls() {
 }
 
 $('modal-body').addEventListener('change', (e) => {
+  if (modalReadOnly) return;   // read-only review: no message selection
   const msgCheck = e.target.closest('.msg-check');
   if (msgCheck) {
     const msg = msgCheck.closest('.msg');
@@ -1385,6 +1467,7 @@ $('modal-body').addEventListener('change', (e) => {
 });
 
 $('modal-body').addEventListener('click', (e) => {
+  if (modalReadOnly) return;   // read-only review: no message deletion
   const turnTrash = e.target.closest('.turn-trash');
   if (turnTrash) {
     deleteMessagesInModal(liveMsgUuids(turnTrash.closest('.turn')));
@@ -1565,7 +1648,6 @@ function confirmDialog(message, opts = {}) {
   });
 }
 
-// The close ✕ is hidden while editing (see CSS); in review it closes the modal.
 $('modal-close').addEventListener('click', () => {
   hideTextFab();
   hideOverlay('transcript-modal');
@@ -1575,9 +1657,7 @@ document.querySelectorAll('.overlay').forEach((overlay) => {
   overlay.addEventListener('click', (e) => {
     if (e.target !== overlay) return;
     if (overlay.id === 'confirm-modal') return;  // confirmDialog owns its backdrop
-    // You must leave edit mode before the conversation can be closed, so a
-    // backdrop click in edit mode exits edit mode instead of closing.
-    if (overlay.id === 'transcript-modal' && editing) { exitEditMode(); return; }
+    hideTextFab();
     hideOverlay(overlay.id);
   });
 });
@@ -1585,8 +1665,6 @@ document.querySelectorAll('.overlay').forEach((overlay) => {
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   hideTextFab();
-  // Same rule for Escape: in edit mode it exits editing rather than closing.
-  if (!$('transcript-modal').hidden && editing) { exitEditMode(); return; }
   document.querySelectorAll('.overlay:not([hidden])').forEach((o) => hideOverlay(o.id));
 });
 

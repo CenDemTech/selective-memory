@@ -263,8 +263,19 @@ code {
 .cdt-logo-white { display: none; }
 :root[data-theme="dark"] .cdt-logo-ink { display: none; }
 :root[data-theme="dark"] .cdt-logo-white { display: block; }
-.brand { display: flex; align-items: center; gap: 9px; }
+.brand { display: flex; align-items: center; }
+.brand-home {
+  /* A button wrapping the wordmark; clicking it returns to step 1. */
+  display: flex; align-items: center; gap: 9px;
+  font-family: inherit;
+  background: none; border: 0; padding: 0;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--ink);
+}
+.brand-home:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 .brand-name { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
+.brand-home:hover .brand-name { color: var(--blue); }
 .brand-mark {
   width: 22px; height: 22px;
   display: grid; place-items: center;
@@ -352,6 +363,10 @@ code {
 /* One container for every step: a wide, centred column whose contents are
    left-aligned, so the heading, the chips, and the table all share an edge. */
 .page-inner { max-width: 1180px; margin: 0 auto; padding: 44px 28px 72px; }
+/* The two table steps share a wider column so every column fits without a
+   horizontal scroll, and so the Edit and Export tables render at the same size. */
+#page-3 .page-inner,
+#page-4 .page-inner { max-width: 1280px; }
 
 @media (prefers-reduced-motion: reduce) {
   .page, .stepchips li, .chip-dot, .platform, .btn, .overlay, .modal { transition: none !important; }
@@ -591,7 +606,23 @@ code {
   min-height: 180px;
 }
 
-.conv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+/* Fixed layout so column widths come from the <colgroup>, not the content: a very
+   long conversation title then ellipsizes in its column instead of stretching the
+   table past its container. The name column has no fixed width, so it absorbs all
+   the remaining space. */
+.conv-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+
+.conv-table col.c-check   { width: 40px; }
+.conv-table col.c-started { width: 100px; }
+.conv-table col.c-updated { width: 108px; }
+.conv-table col.c-num     { width: 80px; }
+.conv-table col.c-redact  { width: 100px; }   /* fits the "Redactions" header */
+.conv-table col.c-num-wide { width: 108px; }
+.conv-table col.c-dur     { width: 84px; }
+.conv-table col.c-sens    { width: 118px; }
+.conv-table col.c-action  { width: 116px; }
+.conv-table col.c-action-ro { width: 92px; }
+/* col.c-name is intentionally width-less: it takes the leftover space. */
 
 .conv-table thead th {
   position: sticky;
@@ -604,12 +635,10 @@ code {
   letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  padding: 10px 9px;
+  padding: 10px 7px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
-/* Let the name column soak up any slack so the table fills its container. */
-.conv-table thead th:nth-child(2) { width: 100%; }
 th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { color: var(--ink); }
@@ -658,6 +687,12 @@ th.sortable::after { content: ""; opacity: 0; margin-left: 5px; }
   text-align: left;
 }
 .info-pop strong { font-weight: 600; color: var(--ink); }
+.info-pop-list {
+  margin: 7px 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.info-pop-list li { margin: 2px 0; }
 
 /* Absolute against the fixed .info-pop. The popover's right padding is widened
    above so the copy doesn't run underneath it. */
@@ -688,7 +723,7 @@ th.sortable.desc::after { content: "↓"; opacity: .7; }
 .col-check { width: 42px; }
 .col-action { text-align: right; width: 1%; }
 
-.conv-table tbody td { padding: 11px 9px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.conv-table tbody td { padding: 10px 7px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .conv-table tbody tr:last-child td { border-bottom: 0; }
 .conv-table tbody tr { transition: background .12s var(--ease); }
 .conv-table tbody tr:hover { background: var(--tint); }
@@ -731,6 +766,21 @@ th.sortable.desc::after { content: "↓"; opacity: .7; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The whole Edit row opens the transcript on click. On hover (and keyboard
+   focus) its cells go bold + underlined to signal the row is clickable — all of
+   it except the checkbox and the row actions, which keep their own behaviour.
+   The "bold" is faked with a text-shadow rather than a font-weight change, so the
+   glyphs keep their width and the table never reflows (a long title that would
+   otherwise grow on hover and shove the columns around). */
+.conv-table tbody tr.row-open { cursor: pointer; }
+.conv-table tbody tr.row-open:hover td:not(.col-check):not(.col-action),
+.conv-table tbody tr.row-open:focus-visible td:not(.col-check):not(.col-action),
+.conv-table tbody tr.row-open:hover .conv-name,
+.conv-table tbody tr.row-open:focus-visible .conv-name {
+  text-shadow: 0.4px 0 0 currentColor, -0.4px 0 0 currentColor;
+  text-decoration: underline;
+}
+.conv-table tbody tr.row-open:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 /* Spells out what the count pill totals, on its own line so it can't widen the
    table — it stays narrower than the longest conversation name in the column. */
 .edit-summary {
@@ -742,6 +792,12 @@ th.sortable.desc::after { content: "↓"; opacity: .7; }
   max-width: 100%;
 }
 .muted { color: var(--ink-soft); white-space: nowrap; }
+
+/* Started / Last updated: date on top, time muted below. Stacking them keeps the
+   column as narrow as the date alone so the table fits without a horizontal scroll. */
+.when-cell { white-space: nowrap; line-height: 1.3; }
+.when-date { display: block; }
+.when-time { display: block; font-size: 11px; color: var(--ink-faint); }
 
 input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; }
 
@@ -1019,6 +1075,7 @@ body.is-advanced .review-btn:hover {
 .hl-select:disabled { opacity: .55; cursor: default; }
 
 .redact-btn {
+  position: relative;
   padding: 6px 12px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -1037,75 +1094,83 @@ body.is-advanced .review-btn:hover {
 .redact-btn.blue { background: var(--blue); color: var(--white); }
 .redact-btn.blue:disabled { opacity: .5; cursor: not-allowed; filter: none; }
 
-/* Edit toggle — reveals the editing tools. Blue while off (an invitation to
-   edit), quiet once on (it now reads "Done"). Always visible, so any
-   conversation, green ones included, can be edited. */
-.edit-toggle {
+
+/* Highlight-mode toggle — a highlighter-pen icon button. On by default; its
+   pressed (on) state reads yellow, matching the manual-highlight selection it
+   arms. A little popup on hover/focus explains what it does. */
+.highlight-toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 32px; height: 30px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--blue);
-  color: var(--white);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
+  background: transparent;
+  color: var(--ink-faint);
   cursor: pointer;
-  white-space: nowrap;
   transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease);
 }
-.edit-toggle:hover { background: var(--blue-hover); }
-.edit-toggle-icon { display: inline-flex; }
-.edit-toggle-icon svg { width: 14px; height: 14px; display: block; }
-/* Swap the pencil (enter) for an ✕ (exit) once editing is on. */
-.edit-toggle .icon-exit { display: none; }
-.edit-toggle[aria-pressed="true"] .icon-edit { display: none; }
-.edit-toggle[aria-pressed="true"] .icon-exit { display: inline-flex; }
-.edit-toggle[aria-pressed="true"] {
-  background: var(--surface-3);
-  color: var(--ink);
-  border-color: var(--border-strong);
+.highlight-toggle:hover { background: var(--tint-strong); color: var(--ink-soft); }
+.highlighter-icon { display: inline-flex; }
+.highlighter-icon svg { width: 18px; height: 18px; display: block; }
+/* Pressed = Highlight mode on: yellow, matching the highlight colour. */
+.highlight-toggle[aria-pressed="true"] {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: var(--warn);
 }
-.edit-toggle[aria-pressed="true"]:hover { background: var(--tint-strong); }
+.highlight-toggle[aria-pressed="true"]:hover { filter: brightness(1.05); }
+.highlight-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
-/* Highlight-mode switch — a slider toggle that turns drag-select-to-highlight
-   on. Only shown in edit mode. */
-.highlight-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  user-select: none;
-  white-space: nowrap;
-}
-.highlight-mode input { position: absolute; opacity: 0; width: 0; height: 0; }
-.highlight-mode .switch {
-  position: relative;
-  width: 34px; height: 18px;
-  flex-shrink: 0;
-  border-radius: 99px;
-  background: var(--surface-3);
+/* Hover popups that explain a header control. They sit below their button; the
+   highlight icon's is right-aligned (it's near the modal's right edge) and the
+   Redact all button's is left-aligned. */
+.highlight-tip,
+.redact-tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 10;
+  width: 230px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--surface);
   border: 1px solid var(--border-strong);
-  transition: background .15s var(--ease), border-color .15s var(--ease);
+  box-shadow: var(--shadow-md);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity .14s var(--ease), transform .14s var(--ease), visibility .14s;
+  pointer-events: none;
 }
-.highlight-mode .switch::after {
+.highlight-tip { right: 0; }
+.redact-tip { left: 0; }
+.highlight-tip strong,
+.redact-tip strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+.highlight-tip::before,
+.redact-tip::before {
   content: "";
   position: absolute;
-  top: 2px; left: 2px;
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  background: var(--ink-soft);
-  transition: transform .15s var(--ease), background .15s var(--ease);
+  top: -4px;
+  width: 8px; height: 8px;
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong);
+  border-top: 1px solid var(--border-strong);
+  transform: rotate(45deg);
 }
-.highlight-mode input:checked + .switch { background: var(--blue); border-color: var(--blue); }
-.highlight-mode input:checked + .switch::after { transform: translateX(16px); background: var(--white); }
-/* The label reads yellow — it arms the manual-highlight (yellow) selection. */
-.highlight-mode-label { color: var(--warn); }
-.highlight-mode input:focus-visible + .switch { outline: 2px solid var(--blue); outline-offset: 2px; }
+.highlight-tip::before { right: 13px; }
+.redact-tip::before { left: 13px; }
+.highlight-toggle:hover .highlight-tip,
+.highlight-toggle:focus-visible .highlight-tip,
+#hl-redact-all:hover .redact-tip,
+#hl-redact-all:focus-visible .redact-tip { opacity: 1; visibility: visible; transform: none; }
 
 /* With Highlight mode on, a text selection turns red — it's a delete target, not
    ordinary copying — and the floating Delete button appears above it. */
@@ -1113,28 +1178,24 @@ body.is-advanced .review-btn:hover {
 #transcript-modal.hl-mode .bubble *::selection { background: var(--danger-solid); color: var(--white); }
 #transcript-modal.hl-mode .bubble { cursor: text; }
 
-/* ── Review vs. Edit mode ─────────────────────────────────────────────
-   The modal opens read-only: the transcript, the highlight finder, undo/redo,
-   and the revision count are all you see. The Edit button adds the `editing`
-   class, which reveals the tools that actually change the conversation and
-   swaps itself out for them. */
-#transcript-modal .redact-btn,
-#transcript-modal .edit-controls,
-#transcript-modal .highlight-mode,
-#transcript-modal .foot-right { display: none; }
-/* The finder is hidden in review only when there are no highlights to step
-   through; edit mode always shows it (greyed when the conversation is green). */
-#transcript-modal:not(.editing).no-highlights #hl-nav { display: none; }
-#transcript-modal.editing .redact-btn { display: inline-block; }
-#transcript-modal.editing .highlight-mode { display: inline-flex; }
-#transcript-modal.editing .foot-right { display: flex; }
-/* The close ✕ is replaced by the Exit Edit button while editing, so you have to
-   leave edit mode before the conversation can be closed. */
-#transcript-modal.editing #modal-close { display: none; }
-/* Both turn-level and per-message checkbox + trash are always visible in edit
-   mode — static, not hover-revealed. */
-#transcript-modal.editing .turn-controls,
-#transcript-modal.editing .msg-controls { display: inline-flex; }
+/* The conversation window opens with every editing tool visible — there's no
+   separate read-only mode. The finder stays visible (greyed and disabled, via
+   resetHighlightNav, when there are no highlights) so the header reads the same
+   on every conversation. Per-message/turn checkbox + trash are static too. */
+#transcript-modal .redact-btn { display: inline-block; }
+#transcript-modal .highlight-toggle { display: inline-flex; }
+#transcript-modal .foot-right { display: flex; }
+#transcript-modal .edit-controls { display: inline-flex; }
+
+/* Read-only review (opened from the Export step): the transcript and its
+   highlight colours stay, but every editing affordance is removed. */
+#transcript-modal.view-only .hl-tools,
+#transcript-modal.view-only .highlight-toggle,
+#transcript-modal.view-only .text-delete-fab,
+#transcript-modal.view-only .edit-controls,
+#transcript-modal.view-only .modal-foot { display: none; }
+/* No footer, so give the body a little breathing room at the bottom. */
+#transcript-modal.view-only .modal-body { padding-bottom: 22px; }
 
 .icon-btn {
   background: none; border: 0;
