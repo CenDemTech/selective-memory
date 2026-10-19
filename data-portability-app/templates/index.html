@@ -5,7 +5,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conversation Filter</title>
+  <title>Selective Memory</title>
+  <!-- SVG first for crispness at any size; the PNG covers browsers that still
+       ignore SVG favicons. -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script>
     /* Inline in <head> on purpose: this has to run before the first paint, or
@@ -25,11 +29,14 @@
 <header class="topbar">
   <div class="brand">
     <button class="brand-home" type="button" data-goto="1"
-            title="Back to platform selection" aria-label="Conversation Filter — back to platform selection">
+            title="Back to platform selection" aria-label="Selective Memory — back to platform selection">
+      <!-- Conversation bubble with a pencil knocked out of it: the chip's blue
+           shows through the cut-out, which stays legible at 14px where an
+           outlined two-part icon would mush together. -->
       <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11L9.4 8.6v4.2l-2.8 1.4V8.6L2.5 3.5Z" fill="currentColor"/></svg>
+        <svg viewBox="0 0 16 16" fill="none"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M3.7 2.2h8.6a2.2 2.2 0 0 1 2.2 2.2v5.2a2.2 2.2 0 0 1-2.2 2.2H6.6l-2.7 2.4v-2.4h-.2a2.2 2.2 0 0 1-2.2-2.2V4.4a2.2 2.2 0 0 1 2.2-2.2ZM4.7 10.6 5.6 7.7 9.4 3.9l1.9 1.9-3.8 3.8Z"/></svg>
       </span>
-      <span class="brand-name">Conversation Filter</span>
+      <span class="brand-name">Selective Memory</span>
     </button>
   </div>
 

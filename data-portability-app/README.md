@@ -1,4 +1,4 @@
-# Conversation Filter App
+# Selective Memory: Chatbot Data Portability on Your Terms
 
 A local mini app for filtering AI chat exports. Bring a `conversations.json`
 file, review every conversation in a table, select the ones you care about, and

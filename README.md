@@ -1,4 +1,4 @@
-# Data Portability: Filter, Redact, Export Conversations Between AI Platforms
+# Selective Memory: Chatbot Data Portability on Your Terms
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/downloads/)

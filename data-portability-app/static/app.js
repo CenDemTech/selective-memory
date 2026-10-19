@@ -1,4 +1,4 @@
-/* Conversation Filter — front-end controller.
+/* Selective Memory — front-end controller.
    Three pages — Platform selection, Edit, Export — over one in-memory table.
    Uploading is a modal rather than a page of its own, so picking a platform and
    handing over a file read as one step. Ticking a row marks it for the export;
