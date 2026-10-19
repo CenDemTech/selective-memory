@@ -16,7 +16,6 @@ import uuid as uuid_lib
 from flask import Flask, jsonify, request, send_file, render_template
 
 import claude_parser
-import gemini_parser
 import openai_parser
 
 app = Flask(__name__)
@@ -30,7 +29,7 @@ SESSIONS = {}
 
 # Each platform's parser exposes the same interface; the app stays generic by
 # looking one up per session instead of hard-coding Claude.
-PARSERS = {"claude": claude_parser, "openai": openai_parser, "gemini": gemini_parser}
+PARSERS = {"claude": claude_parser, "openai": openai_parser}
 SUPPORTED_PLATFORMS = set(PARSERS)
 
 
