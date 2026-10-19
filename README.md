@@ -31,13 +31,22 @@ This app runs entirely locally, your data never leaves your machine.
 2. **Upload File** — Drag and drop or browse for your `conversations.json` file
 > [!TIP]
 > To try it out, use example `conversations.json` files in the [sample data folder](data-portability-app/sample_data)
+
+![Screenshot GIF of selecting and uploading a conversation JSON to edit](assets/upload.gif)
+
 3. **Review Conversations** — View all conversations in a searchable, sortable table with metadata (date, message count, word count, sensitivity tag)
    - Review conversations with possibly sensitive content which is highlighted by category (Red, Yellow, or Green tags)
    - Redact detected sensitive content
    - Redact any additional content that is deemed sensitive upon human review
    - Delete messages or whole turns
    - Delete conversations
+
+![Screenshot GIF of redacting possibly sensitive information in chat history and selecting chats to export](assets/edit.gif)
+
 4. **Select for export** — Select the conversations you want to keep and review.
+
+![Screenshot GIF of reviewing the selected chat history to export and downloading new conversation JSON](assets/export.gif)
+
 5. **Download** — Save your filtered `conversations.json` file for upload to another platform.
 
 ### How Sensitivity Labels Work
