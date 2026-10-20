@@ -4,7 +4,7 @@ A local mini app for filtering AI chat exports. Bring a `conversations.json`
 file, review every conversation in a table, select the ones you care about, and
 download a new JSON file with **the same structure** as the one you uploaded.
 
-Claude and ChatGPT (OpenAI) exports are supported today. Gemini is not currently supported. 
+Claude and ChatGPT (OpenAI) exports are supported today. Gemini is not currently supported due to user conversation text not being easily accessible in Gemini's conversation.json file. 
 
 > [!NOTE]
 > Everything is private and runs locally. Nothing leaves your machine. Your upload is written to a temporary directory for
