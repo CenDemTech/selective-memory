@@ -56,3 +56,6 @@ The sensitivity labels or sensitive information detection is entirely rule-based
 - 🔴 `Red` — regulated data (health/finance), high-risk PII, live secrets, malicious/exploit content, legal exposure, and "what do you know about me" profile-audit questions
 - 🟡 `Yellow` — quasi-identifying or commercially sensitive: geo/proximity, trackable indicators, memory-write requests, business ventures, interpersonal comms, indirect identifiers, corporate IP, creative/copyrighted material
 - 🟢 `Green` — nothing matched
+
+### AI Disclosure
+Claude Code was used to develop the front end and back-end functionality of the apps. Code handing conversation data parsing was written by a human. 
