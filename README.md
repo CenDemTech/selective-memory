@@ -58,4 +58,4 @@ The sensitivity labels or sensitive information detection is entirely rule-based
 - 🟢 `Green` — nothing matched
 
 ### AI Disclosure
-Code handing conversation data parsing was written by members of CDT's AI Governance Lab. To make the parsing code operational for users at scale, we developed an application, Selective Memory, with the assistance of Claude Code. Claude Code was used to develop the application's front and backend functionality.
+The code handling conversation data parsing was written by members of CDT's AI Governance Lab. To make the parsing code operational for users at scale, we developed an application, Selective Memory, with the assistance of Claude Code. Claude Code was used to develop the application's front and backend functionality.
