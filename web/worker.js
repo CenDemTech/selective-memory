@@ -51,10 +51,14 @@ const ready = (async () => {
   return pyodide.globals.get('handle');
 })();
 
-ready.then(
-  () => self.postMessage({ type: 'ready' }),
-  (err) => self.postMessage({ type: 'failed', text: String(err && err.message || err) }),
-);
+(async () => {
+  try {
+    await ready;
+    self.postMessage({ type: 'ready' });
+  } catch (err) {
+    self.postMessage({ type: 'failed', text: String((err && err.message) || err) });
+  }
+})();
 
 self.onmessage = async (event) => {
   const { id, method, path, ctype, body } = event.data;
