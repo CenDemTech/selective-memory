@@ -57,33 +57,44 @@ HERE = Path(__file__).resolve().parent
 APP = HERE.parent / "data-portability-app"
 
 
-def log(msg):
+def log(msg: str) -> None:
+    """Print a build progress message."""
     print(f"[build] {msg}", flush=True)
 
 
-def build_page(out):
+def build_page(out: Path) -> None:
+    """Write index.html from the Flask template, with static paths."""
     html = (APP / "templates" / "index.html").read_text(encoding="utf-8")
     html, n = re.subn(
-        r"\{\{\s*url_for\('static',\s*filename='([^']+)'\)\s*\}\}", r"static/\1", html
+        r"\{\{\s*url_for\('static',\s*filename='([^']+)'\)\s*\}\}",
+        r"static/\1",
+        html,
     )
     if "{{" in html or "{%" in html:
-        sys.exit("index.html has template tags build.py doesn't handle yet")
+        sys.exit("index.html has template tags build.py doesn't handle")
     html = html.replace(
         "local app and deleted immediately when you close the session.",
-        "app running inside your browser, and is cleared when you close this tab.",
+        "app running inside your browser, and is cleared when you close "
+        "this tab.",
     )
     app_js = '<script src="static/app.js"></script>'
     if app_js not in html:
         sys.exit("could not find the app.js script tag in index.html")
-    html = html.replace(app_js, '<script src="bridge.js"></script>\n' + app_js)
+    bridge = '<script src="bridge.js"></script>\n'
+    html = html.replace(app_js, bridge + app_js)
     (out / "index.html").write_text(html, encoding="utf-8")
     log(f"index.html ({n} static links rewritten)")
 
 
-def copy_python(out):
-    # Saved as .txt so every static host serves them as plain files.
+def copy_python(out: Path) -> list[str]:
+    """Copy the app's Python modules (not tests) and return their names.
+
+    They are saved as .txt so every static host serves them as plain files.
+    """
     names = sorted(
-        p.name for p in APP.glob("*.py") if not p.name.startswith(("test_", "conftest"))
+        p.name
+        for p in APP.glob("*.py")
+        if not p.name.startswith(("test_", "conftest"))
     )
     (out / "py").mkdir()
     for name in names:
@@ -92,50 +103,71 @@ def copy_python(out):
     return names
 
 
-def build_flask_wheels(out):
+def build_flask_wheels(out: Path) -> None:
+    """Download Flask's pure-Python wheels and embed them in a JS file."""
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run(
             [sys.executable, "-m", "pip", "download", "-q", "--no-deps",
              "--only-binary=:all:", "-d", tmp, *PYPI_WHEELS],
             check=True,
         )
-        wheels = {p.stem: base64.b64encode(p.read_bytes()).decode() for p in Path(tmp).glob("*.whl")}
+        wheels = {
+            p.stem: base64.b64encode(p.read_bytes()).decode()
+            for p in Path(tmp).glob("*.whl")
+        }
     if len(wheels) != len(PYPI_WHEELS):
         sys.exit(f"expected {len(PYPI_WHEELS)} wheels, got {sorted(wheels)}")
     (out / "flask-wheels.js").write_text(
-        "/* Flask and the pure-Python packages it needs, base64-encoded wheels from PyPI. */\n"
+        "/* Flask and the pure-Python packages it needs "
+        "(base64-encoded wheels from PyPI). */\n"
         f"self.FLASK_WHEELS = {json.dumps(wheels)};\n",
         encoding="utf-8",
     )
     log(f"flask-wheels.js ({', '.join(sorted(wheels))})")
 
 
-def fetch_pyodide(out):
+def fetch_pyodide(out: Path) -> None:
+    """Download Pyodide and keep only the core files and needed packages."""
     log(f"downloading Pyodide {PYODIDE_VERSION} (about 360 MB, one time)")
     target = out / "pyodide"
     target.mkdir()
     with urllib.request.urlopen(PYODIDE_TARBALL) as resp:
         data = resp.read()
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:bz2") as tar:
-        lock = json.load(tar.extractfile("pyodide/pyodide-lock.json"))["packages"]
+        lock_file = tar.extractfile("pyodide/pyodide-lock.json")
+        lock = json.load(lock_file)["packages"]
         needed, todo = set(), list(PYODIDE_PACKAGES)
         while todo:
             name = todo.pop()
             if name not in needed:
                 needed.add(name)
                 todo.extend(lock[name]["depends"])
-        files = PYODIDE_CORE + [lock[name]["file_name"] for name in sorted(needed)]
+        wheels = [lock[name]["file_name"] for name in sorted(needed)]
+        files = PYODIDE_CORE + wheels
         for name in files:
             member = tar.extractfile(f"pyodide/{name}")
             (target / name).write_bytes(member.read())
-    log(f"pyodide/ ({len(files)} files: core + {', '.join(sorted(needed))})")
+    packages = ", ".join(sorted(needed))
+    log(f"pyodide/ ({len(files)} files: core + {packages})")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", default=str(HERE / "dist"), help="output folder (default: web/dist)")
-    parser.add_argument("--pyodide", choices=["local", "cdn"], default="local",
-                        help="bundle Pyodide in the site (local) or load it from jsDelivr (cdn)")
+def main() -> None:
+    """Parse arguments and build the site."""
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--out",
+        default=str(HERE / "dist"),
+        help="output folder (default: web/dist)",
+    )
+    parser.add_argument(
+        "--pyodide",
+        choices=["local", "cdn"],
+        default="local",
+        help="bundle Pyodide in the site (local) or load it from jsDelivr",
+    )
     args = parser.parse_args()
 
     out = Path(args.out).resolve()
