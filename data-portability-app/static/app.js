@@ -1696,7 +1696,13 @@ async function build() {
     $('result-filename').textContent = data.filename;
     $('result-meta').textContent =
       `${data.conversations_in_file.toLocaleString()} conversation${data.conversations_in_file === 1 ? '' : 's'} · ${formatBytes(data.size_bytes)}`;
-    $('download-link').href = `/api/download?token=${state.token}`;
+    // Fetch the file and link to it as a blob URL. Works with the local Flask
+    // server and with the browser build (web/), where /api/* never hits a server.
+    const dlRes = await fetch(`/api/download?token=${state.token}`);
+    if (!dlRes.ok) throw new Error('Could not prepare the download.');
+    if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
+    state.downloadUrl = URL.createObjectURL(await dlRes.blob());
+    $('download-link').href = state.downloadUrl;
     $('download-link').setAttribute('download', data.filename);
     showOverlay('download-modal');
   } catch (err) {
