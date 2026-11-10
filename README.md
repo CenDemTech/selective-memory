@@ -4,7 +4,11 @@
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/CenDemTech/chat-data-portability)
 
-Open-source proof of concept to enable users to upload their conversation data from major AI platforms, redact potentially sensitive information from conversations and choose which conversations they want to port from one system to another, and download a new copy of their conversation data for upload. Read the full article on data portability [here](https://cdt.org/insights/ai-data-portability-that-preserves-privacy-is-possible-cdt-built-a-new-software-tool-to-prove-it/)!
+Open-source proof of concept to enable users to upload their conversation data from major AI platforms, redact potentially sensitive information from conversations and choose which conversations they want to port from one system to another, and download a new copy of their conversation data for upload. 
+
+**Helpful links:**
+- Read the full article on data portability [here](https://cdt.org/insights/ai-data-portability-that-preserves-privacy-is-possible-cdt-built-a-new-software-tool-to-prove-it/)!
+- Use the [browser version](https://cendemtech.github.io/selective-memory/) of this tool with no set-up! Built for non-technical users who don't want to download the code and spin up the application locally on their computers. 
 
 ## Quick Install
 
