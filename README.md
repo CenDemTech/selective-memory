@@ -23,6 +23,10 @@ Open-source proof of concept to enable users to upload their conversation data f
 3. **Open in your browser**:
    Navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
+## Browser Version (No Install)
+
+Selective Memory can also run entirely in a web browser, so people can use it from a link without Python or a terminal. Files are still processed only on the user's own computer. See [`web/README.md`](web/README.md) to build it or publish it with GitHub Pages.
+
 ## How to Use
 
 This app runs entirely locally, your data never leaves your machine. 
