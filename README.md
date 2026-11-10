@@ -8,7 +8,7 @@ Open-source proof of concept to enable users to upload their conversation data f
 
 **Helpful links:**
 - Read the full article on data portability [here](https://cdt.org/insights/ai-data-portability-that-preserves-privacy-is-possible-cdt-built-a-new-software-tool-to-prove-it/)!
-- Use the [browser version](http://cendemtech.github.io/selective-memory/) of this tool with no set-up! Built for non-technical users who don't want to download the code and spin up the application locally on their computers. 
+- Use the [browser version](https://cendemtech.github.io/selective-memory/) of this tool with no set-up! Built for non-technical users who don't want to download the code and spin up the application locally on their computers. 
 
 ## Quick Install
 
