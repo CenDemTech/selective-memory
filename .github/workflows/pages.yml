@@ -24,8 +24,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - id: pages
+        uses: actions/configure-pages@v5
       - name: Build static site
-        run: python web/build.py --out _site
+        run: python web/build.py --out _site --site-url "${{ steps.pages.outputs.base_url }}/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

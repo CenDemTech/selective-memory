@@ -23,12 +23,6 @@ using [Pyodide](https://pyodide.org) (Python compiled to WebAssembly).
   plain HTML file, copies `static/` and the Python modules, and packages Pyodide
   and the pure-Python Flask wheels.
 
-The only change outside this folder is in `static/app.js`: the download link
-now fetches the exported file and links to it as a blob URL. This works for
-both the local server and the browser build.
-
-CDT's test suite (68 tests) passes when run under the same Pyodide runtime.
-
 ## Build
 
 ```bash
@@ -56,9 +50,16 @@ block Web Workers on `file://` pages, so the site has to be served.
 `.github/workflows/pages.yml` builds the site and publishes it to GitHub Pages
 on every push to `main`. To turn it on, go to **Settings → Pages** and set
 **Source** to **GitHub Actions**. The site will then be at
-`https://<owner>.github.io/<repo>/`.
+`https://cendemtech.github.io/selective-memory/`.
 
 `dist/` is a folder of static files, so any static host also works.
+
+`build.py` also adds SEO and link-preview tags to the page: a description,
+canonical URL, Open Graph, Twitter card, and schema.org JSON-LD. These are the
+same tags [jekyll-seo-tag](https://jekyll.github.io/jekyll-seo-tag/) produces.
+The site isn't built with Jekyll, so it can't use that plugin directly. The
+wording is set at the top of `build.py`. The workflow passes in the real Pages
+URL. If you host the site somewhere else, pass `--site-url`.
 
 ## Performance
 

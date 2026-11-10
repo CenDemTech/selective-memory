@@ -18,6 +18,7 @@ Pages, Netlify, a university web server). To try it locally:
 
 import argparse
 import base64
+import html as html_lib
 import io
 import json
 import re
@@ -56,13 +57,79 @@ PYPI_WHEELS = [
 HERE = Path(__file__).resolve().parent
 APP = HERE.parent / "data-portability-app"
 
+# Search and link-preview metadata, matching what jekyll-seo-tag would emit.
+# The site isn't built with Jekyll (it is uploaded as-is), so build.py writes
+# the tags itself.
+SITE_NAME = "Selective Memory"
+SITE_URL = "https://cendemtech.github.io/selective-memory/"
+SITE_DESCRIPTION = (
+    "Selective Memory offers AI data portability on your terms, not AI "
+    "companies. You can edit your downloaded AI chatbot conversations before "
+    "you upload them to a new service, picking and choosing which "
+    "conversations you want to include, and redacting potentially sensitive "
+    "data."
+)
+# Link-preview image (web/social-preview.png, copied to the site root).
+SITE_IMAGE = "social-preview.png"
+SITE_IMAGE_SIZE = (1280, 640)
+SITE_IMAGE_ALT = "CDT AI Governance Lab"
+PUBLISHER = "Center for Democracy & Technology"
+
 
 def log(msg: str) -> None:
     """Print a build progress message."""
     print(f"[build] {msg}", flush=True)
 
 
-def build_page(out: Path) -> None:
+def seo_tags(site_url: str) -> str:
+    """Return the <head> tags for search engines and link previews.
+
+    Mirrors jekyll-seo-tag's output: description, canonical URL, Open Graph,
+    Twitter card, and schema.org JSON-LD.
+    """
+    url = site_url.rstrip("/") + "/"
+    image = url + SITE_IMAGE
+    attr = html_lib.escape
+    ld = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": SITE_NAME,
+        "headline": SITE_NAME,
+        "description": SITE_DESCRIPTION,
+        "url": url,
+        "image": image,
+        "publisher": {
+            "@type": "Organization",
+            "name": PUBLISHER,
+            "logo": {"@type": "ImageObject", "url": image},
+        },
+    }
+    # "</" can't appear inside a <script> block.
+    ld_json = json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")
+    return (
+        "  <!-- SEO tags written by web/build.py -->\n"
+        f'  <meta name="description" content="{attr(SITE_DESCRIPTION)}">\n'
+        f'  <link rel="canonical" href="{attr(url)}">\n'
+        f'  <meta property="og:title" content="{attr(SITE_NAME)}">\n'
+        f'  <meta property="og:site_name" content="{attr(SITE_NAME)}">\n'
+        f'  <meta property="og:description" content="{attr(SITE_DESCRIPTION)}">\n'
+        f'  <meta property="og:url" content="{attr(url)}">\n'
+        f'  <meta property="og:image" content="{attr(image)}">\n'
+        f'  <meta property="og:image:width" content="{SITE_IMAGE_SIZE[0]}">\n'
+        f'  <meta property="og:image:height" content="{SITE_IMAGE_SIZE[1]}">\n'
+        f'  <meta property="og:image:alt" content="{attr(SITE_IMAGE_ALT)}">\n'
+        '  <meta property="og:type" content="website">\n'
+        '  <meta property="og:locale" content="en_US">\n'
+        '  <meta name="twitter:card" content="summary_large_image">\n'
+        f'  <meta name="twitter:title" content="{attr(SITE_NAME)}">\n'
+        f'  <meta name="twitter:description" content="{attr(SITE_DESCRIPTION)}">\n'
+        f'  <meta name="twitter:image" content="{attr(image)}">\n'
+        f'  <meta name="twitter:image:alt" content="{attr(SITE_IMAGE_ALT)}">\n'
+        f'  <script type="application/ld+json">{ld_json}</script>\n'
+    )
+
+
+def build_page(out: Path, site_url: str) -> None:
     """Write index.html from the Flask template, with static paths."""
     html = (APP / "templates" / "index.html").read_text(encoding="utf-8")
     html, n = re.subn(
@@ -82,6 +149,10 @@ def build_page(out: Path) -> None:
         sys.exit("could not find the app.js script tag in index.html")
     bridge = '<script src="bridge.js"></script>\n'
     html = html.replace(app_js, bridge + app_js)
+    title = "</title>\n"
+    if title not in html:
+        sys.exit("could not find the </title> tag in index.html")
+    html = html.replace(title, title + seo_tags(site_url), 1)
     (out / "index.html").write_text(html, encoding="utf-8")
     log(f"index.html ({n} static links rewritten)")
 
@@ -168,6 +239,11 @@ def main() -> None:
         default="local",
         help="bundle Pyodide in the site (local) or load it from jsDelivr",
     )
+    parser.add_argument(
+        "--site-url",
+        default=SITE_URL,
+        help=f"public URL of the site, for SEO tags (default: {SITE_URL})",
+    )
     args = parser.parse_args()
 
     out = Path(args.out).resolve()
@@ -176,12 +252,12 @@ def main() -> None:
     out.mkdir(parents=True)
 
     shutil.copytree(APP / "static", out / "static")
-    for name in ["bridge.js", "worker.js"]:
+    for name in ["bridge.js", "worker.js", SITE_IMAGE]:
         shutil.copy(HERE / name, out / name)
     shutil.copy(HERE.parent / "LICENSE", out / "LICENSE.txt")
     (out / ".nojekyll").write_text("")  # GitHub Pages: serve files as-is
 
-    build_page(out)
+    build_page(out, args.site_url)
     py_files = copy_python(out)
     build_flask_wheels(out)
 
