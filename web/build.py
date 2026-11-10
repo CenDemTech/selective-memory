@@ -252,6 +252,10 @@ def main() -> None:
     out.mkdir(parents=True)
 
     shutil.copytree(APP / "static", out / "static")
+    # Example exports for the "Try it with a sample file" button.
+    (out / "sample_data").mkdir()
+    for sample in (APP / "sample_data").glob("*.json"):
+        shutil.copy(sample, out / "sample_data" / sample.name)
     for name in ["bridge.js", "worker.js", SITE_IMAGE]:
         shutil.copy(HERE / name, out / name)
     shutil.copy(HERE.parent / "LICENSE", out / "LICENSE.txt")

@@ -119,6 +119,13 @@
           <span class="dropzone-sub">or <span class="link">browse files</span> — .json only (max 512MB)</span>
         </label>
 
+        <!-- Loads the matching file from sample_data/ so people can try the
+             app without an export of their own. -->
+        <div class="sample-row">
+          <span class="sample-text">No export handy?</span>
+          <button type="button" class="btn ghost" id="btn-sample">Try it with a sample file</button>
+        </div>
+
         <div class="upload-status" id="upload-status" hidden>
           <div class="spinner"></div>
           <span id="upload-status-text">Reading your file…</span>

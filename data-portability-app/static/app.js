@@ -155,6 +155,31 @@ dropzone.addEventListener('drop', (e) => {
   if (file) upload(file);
 });
 
+/* "Try it with a sample file": fetch the platform's file from sample_data/ and
+   send it through the normal upload, so it behaves exactly like a real file.
+   The URL is relative so it works on the local server and the browser build. */
+const SAMPLE_FILES = {
+  claude: 'anthropic_conversations.json',
+  openai: 'openai_conversations.json',
+};
+
+$('btn-sample').addEventListener('click', async () => {
+  const name = SAMPLE_FILES[state.platform || 'claude'];
+  const button = $('btn-sample');
+  button.disabled = true;
+  try {
+    const res = await fetch(`sample_data/${name}`);
+    if (!res.ok) throw new Error('Could not load the sample file.');
+    const blob = await res.blob();
+    await upload(new File([blob], name, { type: 'application/json' }));
+  } catch (err) {
+    $('upload-error').textContent = err.message;
+    $('upload-error').hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+});
+
 async function upload(file) {
   // The previous session is kept until the new file has parsed. The modal sits
   // over a live table, so a rejected file has to leave that table working —
