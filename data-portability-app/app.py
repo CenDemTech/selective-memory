@@ -13,7 +13,10 @@ import shutil
 import tempfile
 import uuid as uuid_lib
 
-from flask import Flask, jsonify, request, send_file, render_template
+from flask import (
+    Flask, abort, jsonify, render_template, request, send_file,
+    send_from_directory,
+)
 
 import claude_parser
 import openai_parser
@@ -51,6 +54,17 @@ def _require_session(token):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+SAMPLE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_data")
+
+
+@app.route("/sample_data/<name>")
+def sample_data(name):
+    """Serve the bundled example exports for the "Try it" button."""
+    if not name.endswith(".json"):
+        abort(404)
+    return send_from_directory(SAMPLE_DIR, name)
 
 
 @app.route("/api/upload", methods=["POST"])

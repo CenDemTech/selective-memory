@@ -465,6 +465,16 @@ code {
 .dropzone-title { font-weight: 600; font-size: 14.5px; }
 .dropzone-sub { color: var(--ink-faint); font-size: 12.5px; }
 
+.sample-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin-top: 16px;
+}
+.sample-text { color: var(--ink-faint); font-size: 13px; }
+
 .upload-status { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--ink-soft); font-size: 14px; }
 .spinner {
   width: 16px; height: 16px;
